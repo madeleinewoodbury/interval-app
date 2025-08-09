@@ -11,6 +11,48 @@ export class TimerEngine {
   private round = 1
   private remaining = 0
 
+  /**
+   * Fast-forward the engine by a given elapsed milliseconds that occurred while app was backgrounded.
+   * This simulates ticks so that segment / round transitions are honored.
+   */
+  fastForward(elapsedMs: number) {
+    if (!this.spec) return
+    if (elapsedMs <= 0) return
+    let remainingSeconds = elapsedMs / 1000
+    // Handle countdown phase
+    if (this.state.kind === "countdown") {
+      if (remainingSeconds >= this.remaining) {
+        remainingSeconds -= this.remaining
+        // move to first segment
+        this.beginFirst()
+      } else {
+        this.remaining -= remainingSeconds
+        this.state = { kind: "countdown", remaining: Math.ceil(this.remaining) }
+        this.emit()
+        return
+      }
+    }
+    // If not running, nothing else to do
+    if (this.state.kind !== "running") return
+    while (remainingSeconds > 0 && this.state.kind === "running") {
+      if (remainingSeconds >= this.remaining) {
+        remainingSeconds -= this.remaining
+        // advance to next segment / finish
+        this.advance()
+      } else {
+        this.remaining -= remainingSeconds
+        remainingSeconds = 0
+        this.state = {
+          kind: "running",
+          segmentIndex: this.segIdx,
+          round: this.round,
+          remaining: Math.ceil(this.remaining),
+        }
+        this.emit()
+      }
+    }
+  }
+
   get currentSpec(): TimerSpec | null {
     return this.spec
   }

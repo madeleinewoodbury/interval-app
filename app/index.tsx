@@ -5,10 +5,12 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  useColorScheme,
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useTimer } from "../src/context/TimerProvider"
-import { neutralTheme } from "../src/utils/themeGenerator"
+import { neutralTheme, chooseNeutralTheme } from "../src/utils/themeGenerator"
+import { useSettings } from "../src/context/SettingsProvider"
 import { TimerSpec } from "../src/types"
 import { AntDesign } from "@expo/vector-icons"
 
@@ -76,8 +78,13 @@ export default function TimersScreen() {
   const { timers, loadingTimers, loadTimer, deleteTimer } = useTimer()
   const router = useRouter()
 
-  // Use neutral theme for index screen
-  const theme = neutralTheme
+  const { settings } = useSettings()
+  const systemScheme = useColorScheme() || "light"
+  const pref =
+    settings.themePreference === "system"
+      ? systemScheme
+      : settings.themePreference
+  const theme = chooseNeutralTheme(pref === "light" ? "light" : "dark")
 
   const handleTimerPress = (timer: TimerSpec) => {
     loadTimer(timer)
@@ -121,7 +128,7 @@ export default function TimersScreen() {
           onPress: async () => {
             try {
               await deleteTimer(timer.id)
-            } catch (error) {
+            } catch {
               Alert.alert("Error", "Failed to delete timer. Please try again.")
             }
           },
@@ -205,6 +212,7 @@ export default function TimersScreen() {
         contentContainerStyle={{ padding: 16, paddingTop: 8, gap: 12 }}
         showsVerticalScrollIndicator={false}
       >
+        {/** Removed Run Last Timer button; auto-start handled when entering Run tab */}
         {timers.length === 0 ? (
           <View
             style={{

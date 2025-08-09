@@ -63,6 +63,34 @@ export class NotificationService {
     }
   }
 
+  // Schedule multiple notifications at specific relative times (seconds from now)
+  static async scheduleMultiple(
+    entries: { title: string; body: string; seconds: number }[],
+  ): Promise<string[]> {
+    const ids: string[] = []
+    for (const e of entries) {
+      try {
+        const id = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: e.title,
+            body: e.body,
+            sound: true,
+          },
+          trigger: {
+            seconds: Math.max(1, Math.floor(e.seconds)),
+            channelId: "interval-timer",
+          },
+        })
+        ids.push(id)
+      } catch (err) {
+        console.error("Failed scheduling notification", e, err)
+      }
+    }
+    // Track only last one as current for legacy API consistency
+    if (ids.length) this.currentNotificationId = ids[ids.length - 1]
+    return ids
+  }
+
   static async cancelCurrentNotification() {
     if (this.currentNotificationId) {
       try {

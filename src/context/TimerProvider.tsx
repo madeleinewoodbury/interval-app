@@ -16,12 +16,15 @@ import { TimerEngine } from "../engine/timerEngine"
 import { EngineState, TimerSpec } from "../types"
 import { TimerStorage } from "../services/TimerStorage"
 import { NotificationService } from "../services/NotificationService"
+import { useSettings } from "./SettingsProvider"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 
 type Ctx = {
   // Timer engine
   engine: TimerEngine
   state: EngineState
   loadTimer: (t: TimerSpec) => void
+  startLastOrFirst: () => Promise<void>
   start: () => void
   pause: () => void
   resume: () => void
@@ -55,8 +58,10 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   useKeepAwake()
   const engine = useMemo(() => new TimerEngine(), [])
+  const { settings } = useSettings()
   const [state, setState] = useState<EngineState>({ kind: "idle" })
   const currentTimer = useRef<TimerSpec | null>(null)
+  const LAST_TIMER_KEY = "last_selected_timer_id_v1"
 
   // Timer management state
   const [timers, setTimers] = useState<TimerSpec[]>([])
@@ -65,6 +70,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
   // App state management
   const appState = useRef(AppState.currentState)
   const [isInBackground, setIsInBackground] = useState(false)
+  const backgroundAt = useRef<number | null>(null)
 
   // preload sounds on first use
   const soundCache = useRef<Record<string, Audio.Sound | null>>({})
@@ -192,9 +198,76 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     initializeApp()
+  }, [refreshTimers])
+
+  // Configure audio mode so short sounds can still play (where supported) & allow in silent mode
+  useEffect(() => {
+    ;(async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          // allow haptics + sound in silent and attempt to keep active
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        })
+      } catch (e) {
+        console.warn("Failed to set audio mode", e)
+      }
+    })()
   }, [])
 
-  // App state listener for background/foreground detection
+  // Removed unused segment-level notification helpers
+
+  // (Deprecated) scheduleCompletionNotification removed in favor of scheduling all boundaries
+
+  // Schedule notifications for each remaining segment boundary (work/rest) plus completion
+  const scheduleAllRemainingSegmentNotifications = useCallback(async () => {
+    if (!isInBackground) return
+    const spec = currentTimer.current
+    if (!spec) return
+    if (!(state.kind === "running" || state.kind === "paused")) return
+    const entries: { title: string; body: string; seconds: number }[] = []
+    // build boundaries for remaining segments
+    let offset = state.remaining // time until current segment ends
+    const startRound = state.round
+    let segIdx = state.segmentIndex
+    let round = startRound
+    // Helper to push entry for current boundary
+    function push(boundLabel: string, secs: number) {
+      if (!spec) return
+      entries.push({
+        title: spec.name,
+        body: boundLabel,
+        seconds: Math.max(1, Math.floor(secs)),
+      })
+    }
+    // Remaining segments in current round after current
+    while (round <= spec.rounds) {
+      // current segment end
+      const segLabel = spec.segments[segIdx]?.label || "Interval"
+      push(`${segLabel} complete`, offset)
+      // advance
+      segIdx++
+      if (segIdx >= spec.segments.length) {
+        round++
+        if (round > spec.rounds) break
+        segIdx = 0
+      }
+      if (round > spec.rounds) break
+      // Add next segment duration to offset for following boundary
+      if (segIdx < spec.segments.length) {
+        offset += spec.segments[segIdx].seconds
+      }
+    }
+    // Replace last boundary message with final completion
+    if (entries.length) entries[entries.length - 1].body = "Timer finished"
+    await NotificationService.cancelAllNotifications()
+    await NotificationService.scheduleMultiple(entries)
+  }, [isInBackground, state])
+
+  // App state listener for background/foreground detection (placed after scheduleCompletionNotification definition)
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       const wasActive = appState.current === "active"
@@ -205,59 +278,23 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
       appState.current = nextAppState
       setIsInBackground(nextAppState !== "active")
 
-      if (
-        goingToBackground &&
-        (state.kind === "running" || state.kind === "countdown")
-      ) {
-        // App going to background with active timer - schedule next notification
-        scheduleNextSegmentNotification()
-      } else if (comingToForeground) {
-        // App coming to foreground - cancel any pending notifications
+      if (goingToBackground) {
         NotificationService.cancelAllNotifications()
+        // comprehensive schedule (segment boundaries + completion)
+        scheduleAllRemainingSegmentNotifications()
+        backgroundAt.current = Date.now()
+      } else if (comingToForeground) {
+        NotificationService.cancelAllNotifications()
+        // Fast-forward engine based on elapsed time while backgrounded
+        if (backgroundAt.current && currentTimer.current) {
+          const elapsed = Date.now() - backgroundAt.current
+          backgroundAt.current = null
+          engine.fastForward(elapsed)
+        }
       }
     })
-
-    return () => subscription?.remove()
-  }, [state])
-
-  // Helper function to calculate next notification details
-  const getNextNotificationInfo = useCallback(() => {
-    if (!currentTimer.current) return null
-
-    if (state.kind === "countdown") {
-      return {
-        title: currentTimer.current.name,
-        body: "Timer starting now!",
-        seconds: state.remaining,
-      }
-    }
-
-    if (state.kind === "running") {
-      const currentSegment =
-        currentTimer.current.segments[state.segmentIndex || 0]
-      const remainingTime = state.remaining || 0
-
-      return {
-        title: currentTimer.current.name,
-        body: `Round ${state.round}/${currentTimer.current.rounds} - ${currentSegment?.label || "Interval"} ending`,
-        seconds: remainingTime,
-      }
-    }
-
-    return null
-  }, [state, currentTimer])
-
-  // Schedule notification for next segment transition
-  const scheduleNextSegmentNotification = useCallback(async () => {
-    const notificationInfo = getNextNotificationInfo()
-    if (notificationInfo && isInBackground) {
-      await NotificationService.scheduleNextNotification(
-        notificationInfo.title,
-        notificationInfo.body,
-        notificationInfo.seconds,
-      )
-    }
-  }, [getNextNotificationInfo, isInBackground])
+    return () => subscription.remove()
+  }, [scheduleAllRemainingSegmentNotifications, engine])
 
   // Track previous state to detect segment transitions
   const prevState = useRef<EngineState>({ kind: "idle" })
@@ -267,44 +304,46 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
       const prev = prevState.current
       setState(s)
 
-      // Play beep_1 when timer starts (countdown to running transition)
+      // Play beep_1 when timer starts (countdown -> running)
       if (
         s.kind === "running" &&
         prev.kind === "countdown" &&
-        currentTimer.current
+        currentTimer.current &&
+        settings.soundsEnabled
       ) {
         await play("beep_1")
       }
 
-      // Play beep_1 on segment transitions (end of intervals)
+      // Segment transition (running -> running with different segmentIndex)
       if (
         s.kind === "running" &&
         prev.kind === "running" &&
-        currentTimer.current
+        currentTimer.current &&
+        prev.segmentIndex !== s.segmentIndex &&
+        settings.soundsEnabled
       ) {
         const spec = currentTimer.current
-
-        // Check if we transitioned to a different segment
-        if (prev.segmentIndex !== s.segmentIndex) {
-          await play("beep_1")
-
-          if (spec.options?.haptics && spec.options.haptics !== "off") {
-            const pattern =
-              spec.options.haptics === "strong"
-                ? Haptics.ImpactFeedbackStyle.Heavy
-                : Haptics.ImpactFeedbackStyle.Light
-            await Haptics.impactAsync(pattern)
-          }
-
-          // Schedule next notification if app is in background
-          if (isInBackground) {
-            scheduleNextSegmentNotification()
-          }
+        await play("beep_1")
+        if (
+          settings.hapticsEnabled &&
+          spec.options?.haptics &&
+          spec.options.haptics !== "off"
+        ) {
+          const pattern =
+            spec.options.haptics === "strong"
+              ? Haptics.ImpactFeedbackStyle.Heavy
+              : Haptics.ImpactFeedbackStyle.Light
+          await Haptics.impactAsync(pattern)
         }
       }
 
       // Play beep_2 at 3, 2, and 1 seconds remaining during initial countdown
-      if (s.kind === "countdown" && currentTimer.current) {
+      if (
+        s.kind === "countdown" &&
+        currentTimer.current &&
+        settings.countdownBeepsEnabled &&
+        settings.soundsEnabled
+      ) {
         // Play beep when countdown shows 3 (either first time or transition to 3)
         if (
           (prev.kind !== "countdown" && s.remaining <= 3) ||
@@ -334,7 +373,9 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
       if (
         s.kind === "running" &&
         prev.kind === "running" &&
-        currentTimer.current
+        currentTimer.current &&
+        settings.countdownBeepsEnabled &&
+        settings.soundsEnabled
       ) {
         // 3 seconds remaining
         if (prev.remaining > 3 && s.remaining <= 3) {
@@ -351,11 +392,14 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (s.kind === "finished" && currentTimer.current?.options?.endSound) {
-        await play(currentTimer.current.options.endSound)
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
-        )
-        // Clean up notifications when timer finishes
+        if (settings.soundsEnabled) {
+          await play(currentTimer.current.options.endSound)
+        }
+        if (settings.hapticsEnabled) {
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success,
+          )
+        }
         await NotificationService.cancelAllNotifications()
 
         // Stop all sounds after a short delay to let completion sound play
@@ -369,23 +413,51 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       unsubscribe() // ensure void return
     }
-  }, [
-    engine,
-    play,
-    isInBackground,
-    scheduleNextSegmentNotification,
-    stopAllSounds,
-  ])
+  }, [engine, play, stopAllSounds, settings])
 
-  function loadTimer(t: TimerSpec) {
-    currentTimer.current = t
-    engine.load(t)
-  }
+  const loadTimer = useCallback(
+    (t: TimerSpec) => {
+      currentTimer.current = t
+      engine.load(t)
+      AsyncStorage.setItem(LAST_TIMER_KEY, t.id).catch(() => {})
+    },
+    [engine],
+  )
 
-  const start = () => {
+  const start = useCallback(() => {
     engine.start()
-    // Notification scheduling is handled by AppState listener
-  }
+  }, [engine])
+
+  const startLastOrFirst = useCallback(async () => {
+    try {
+      // if a timer already loaded do nothing
+      if (currentTimer.current) {
+        start()
+        return
+      }
+      // load timers list if empty
+      if (!timers.length) {
+        await refreshTimers()
+      }
+      let id: string | null = null
+      try {
+        id = await AsyncStorage.getItem(LAST_TIMER_KEY)
+      } catch {}
+      let timerToUse: TimerSpec | undefined
+      if (id) {
+        timerToUse = timers.find((t) => t.id === id)
+      }
+      if (!timerToUse) {
+        timerToUse = timers[0]
+      }
+      if (timerToUse) {
+        loadTimer(timerToUse)
+        start()
+      }
+    } catch (e) {
+      console.warn("Failed to start last or first timer", e)
+    }
+  }, [timers, refreshTimers, loadTimer, start])
 
   const pause = async () => {
     await NotificationService.cancelAllNotifications()
@@ -411,6 +483,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         engine,
         state,
         loadTimer,
+        startLastOrFirst,
         start,
         pause,
         resume,

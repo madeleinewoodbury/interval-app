@@ -32,9 +32,9 @@ export type TimerTheme = {
 function isLightColor(hexColor: string): boolean {
   const hex = hexColor.replace("#", "")
   const r = parseInt(hex.substr(0, 2), 16)
-  const g = parseInt(hex.substr(2, 2), 16)  
+  const g = parseInt(hex.substr(2, 2), 16)
   const b = parseInt(hex.substr(4, 2), 16)
-  
+
   // Calculate luminance using relative luminance formula
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
   return luminance > 0.5
@@ -43,47 +43,74 @@ function isLightColor(hexColor: string): boolean {
 // Helper function to darken a color
 function darkenColor(hexColor: string, percent: number): string {
   const hex = hexColor.replace("#", "")
-  const r = Math.max(0, Math.floor(parseInt(hex.substr(0, 2), 16) * (1 - percent)))
-  const g = Math.max(0, Math.floor(parseInt(hex.substr(2, 2), 16) * (1 - percent)))
-  const b = Math.max(0, Math.floor(parseInt(hex.substr(4, 2), 16) * (1 - percent)))
-  
+  const r = Math.max(
+    0,
+    Math.floor(parseInt(hex.substr(0, 2), 16) * (1 - percent)),
+  )
+  const g = Math.max(
+    0,
+    Math.floor(parseInt(hex.substr(2, 2), 16) * (1 - percent)),
+  )
+  const b = Math.max(
+    0,
+    Math.floor(parseInt(hex.substr(4, 2), 16) * (1 - percent)),
+  )
+
   return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`
 }
 
 // Helper function to lighten a color
 function lightenColor(hexColor: string, percent: number): string {
   const hex = hexColor.replace("#", "")
-  const r = Math.min(255, Math.floor(parseInt(hex.substr(0, 2), 16) + (255 - parseInt(hex.substr(0, 2), 16)) * percent))
-  const g = Math.min(255, Math.floor(parseInt(hex.substr(2, 2), 16) + (255 - parseInt(hex.substr(2, 2), 16)) * percent))
-  const b = Math.min(255, Math.floor(parseInt(hex.substr(4, 2), 16) + (255 - parseInt(hex.substr(4, 2), 16)) * percent))
-  
+  const r = Math.min(
+    255,
+    Math.floor(
+      parseInt(hex.substr(0, 2), 16) +
+        (255 - parseInt(hex.substr(0, 2), 16)) * percent,
+    ),
+  )
+  const g = Math.min(
+    255,
+    Math.floor(
+      parseInt(hex.substr(2, 2), 16) +
+        (255 - parseInt(hex.substr(2, 2), 16)) * percent,
+    ),
+  )
+  const b = Math.min(
+    255,
+    Math.floor(
+      parseInt(hex.substr(4, 2), 16) +
+        (255 - parseInt(hex.substr(4, 2), 16)) * percent,
+    ),
+  )
+
   return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`
 }
 
 // Generate theme from timer specification
 export function generateThemeFromTimer(timerSpec: TimerSpec): TimerTheme {
-  const workSegment = timerSpec.segments.find(s => s.id === "work")
-  const restSegment = timerSpec.segments.find(s => s.id === "rest")
-  
+  const workSegment = timerSpec.segments.find((s) => s.id === "work")
+  const restSegment = timerSpec.segments.find((s) => s.id === "rest")
+
   const workColor = workSegment?.color || "#FF6B35"
   const restColor = restSegment?.color || "#1B4F72"
-  
+
   // Generate UI colors based on work color (primary segment)
   const uiBackground = darkenColor(workColor, 0.85) // Very dark version
   const cardBackground = darkenColor(workColor, 0.75) // Lighter than bg
   const accent = restColor // Use rest color as accent
-  
+
   return {
     work: {
       background: workColor,
       text: isLightColor(workColor) ? "#1A202C" : "#FFFFFF",
-      textSecondary: isLightColor(workColor) 
-        ? "rgba(26, 32, 44, 0.7)" 
+      textSecondary: isLightColor(workColor)
+        ? "rgba(26, 32, 44, 0.7)"
         : "rgba(255, 255, 255, 0.8)",
     },
     rest: {
       background: restColor,
-      text: isLightColor(restColor) ? "#1A202C" : "#FFFFFF", 
+      text: isLightColor(restColor) ? "#1A202C" : "#FFFFFF",
       textSecondary: isLightColor(restColor)
         ? "rgba(26, 32, 44, 0.7)"
         : "rgba(255, 255, 255, 0.8)",
@@ -114,18 +141,18 @@ export const neutralTheme: TimerTheme = {
     textSecondary: "rgba(255, 255, 255, 0.8)",
   },
   rest: {
-    background: "#374151", 
+    background: "#374151",
     text: "#FFFFFF",
     textSecondary: "rgba(255, 255, 255, 0.8)",
   },
   ui: {
     background: "#0F172A",
     cardBackground: "#1E293B",
-    accent: "#3B82F6", 
+    accent: "#3B82F6",
     textPrimary: "#FFFFFF",
     textSecondary: "#94A3B8",
     buttonPrimary: "#3B82F6",
-    buttonSecondary: "#475569", 
+    buttonSecondary: "#475569",
     success: "#22C55E",
   },
   states: {
@@ -133,4 +160,36 @@ export const neutralTheme: TimerTheme = {
     finished: "#059669",
     paused: "#6B7280",
   },
+}
+
+export const neutralLightTheme: TimerTheme = {
+  work: {
+    background: "#FFFFFF",
+    text: "#0F172A",
+    textSecondary: "#475569",
+  },
+  rest: {
+    background: "#FFFFFF",
+    text: "#0F172A",
+    textSecondary: "#475569",
+  },
+  ui: {
+    background: "#F8FAFC",
+    cardBackground: "#FFFFFF",
+    accent: "#2563EB",
+    textPrimary: "#0F172A",
+    textSecondary: "#475569",
+    buttonPrimary: "#2563EB",
+    buttonSecondary: "#E2E8F0",
+    success: "#16A34A",
+  },
+  states: {
+    countdown: "#E2E8F0",
+    finished: "#16A34A",
+    paused: "#94A3B8",
+  },
+}
+
+export function chooseNeutralTheme(mode: "light" | "dark") {
+  return mode === "light" ? neutralLightTheme : neutralTheme
 }

@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { SafeAreaView, Text, View, Pressable } from "react-native"
 import { useTimer } from "../src/context/TimerProvider"
 import {
@@ -10,7 +10,14 @@ import * as Haptics from "expo-haptics"
 import { AntDesign } from "@expo/vector-icons"
 
 export default function RunScreen() {
-  const { state, start, pause, resume, restart, engine } = useTimer()
+  const { state, start, pause, resume, restart, engine, startLastOrFirst } =
+    useTimer()
+  // Auto-start last or first timer when entering Run tab if idle
+  useEffect(() => {
+    if (state.kind === "idle") {
+      startLastOrFirst()
+    }
+  }, [state.kind, startLastOrFirst])
 
   // Generate theme from current timer, fallback to neutral if no timer loaded
   const currentTheme = engine.currentSpec
@@ -70,12 +77,7 @@ export default function RunScreen() {
     return currentTheme.ui.accent
   })()
 
-  // crude progress: remaining / segment seconds
-  const currentProgress = (() => {
-    if (state.kind !== "running") return 0
-    const segSecs = state.remaining // we only know remaining; we’ll pass initial in a ref
-    return 1 - 0 // updated below with a ref
-  })()
+  // progress is derived later from refs; removed unused temp calculation
 
   // Track initial segment seconds to compute progress
   const initSeg = React.useRef<number>(0)
