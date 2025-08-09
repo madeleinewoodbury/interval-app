@@ -8,11 +8,14 @@ import React, {
   useEffect,
 } from "react"
 import { useKeepAwake } from "expo-keep-awake"
+import { AppState, Alert } from "react-native"
 import * as Haptics from "expo-haptics"
+import * as Device from "expo-device"
 import { Audio, AVPlaybackSource } from "expo-av"
 import { TimerEngine } from "../engine/timerEngine"
 import { EngineState, TimerSpec } from "../types"
 import { TimerStorage } from "../services/TimerStorage"
+import { NotificationService } from "../services/NotificationService"
 
 type Ctx = {
   // Timer engine
@@ -59,17 +62,60 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [timers, setTimers] = useState<TimerSpec[]>([])
   const [loadingTimers, setLoadingTimers] = useState(true)
 
+  // App state management
+  const appState = useRef(AppState.currentState)
+  const [isInBackground, setIsInBackground] = useState(false)
+
   // preload sounds on first use
   const soundCache = useRef<Record<string, Audio.Sound | null>>({})
 
   const play = useCallback(async (key?: string) => {
     if (!key) return
-    if (!soundCache.current[key]) {
+    try {
+      // Always recreate the sound to avoid seeking issues
+      if (soundCache.current[key]) {
+        try {
+          await soundCache.current[key]?.unloadAsync()
+        } catch {
+          // Ignore unload errors
+        }
+      }
+
+      // Create fresh sound instance
       const snd = new Audio.Sound()
       await snd.loadAsync(soundMap[key])
       soundCache.current[key] = snd
+
+      // Play the fresh sound
+      await snd.playAsync()
+    } catch (error) {
+      console.error(`Error playing sound ${key}:`, error)
     }
-    await soundCache.current[key]?.replayAsync()
+  }, [])
+
+  const stopAllSounds = useCallback(async () => {
+    try {
+      const soundPromises = Object.values(soundCache.current).map(
+        async (sound) => {
+          if (sound) {
+            try {
+              const status = await sound.getStatusAsync()
+              // Only stop if it's loaded and playing
+              if (status.isLoaded && status.isPlaying) {
+                await sound.stopAsync()
+              }
+            } catch (stopError) {
+              // Ignore individual sound stop errors
+              console.warn("Could not stop individual sound:", stopError)
+            }
+          }
+        },
+      )
+      await Promise.all(soundPromises)
+      console.log("Stopped all sounds")
+    } catch (error) {
+      console.error("Error stopping sounds:", error)
+    }
   }, [])
 
   // Timer management functions
@@ -133,10 +179,85 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     [timers],
   )
 
-  // Load timers on app start
+  // Load timers and initialize notifications on app start
   useEffect(() => {
-    refreshTimers()
+    const initializeApp = async () => {
+      await refreshTimers()
+      const status = await NotificationService.registerForPushNotifications()
+      if (status !== "granted" && Device.isDevice) {
+        Alert.alert(
+          "Notifications Disabled",
+          "Enable notifications in Settings to receive interval alerts when the app is in the background.",
+        )
+      }
+    }
+    initializeApp()
   }, [])
+
+  // App state listener for background/foreground detection
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      const wasActive = appState.current === "active"
+      const isNowActive = nextAppState === "active"
+      const goingToBackground = wasActive && !isNowActive
+      const comingToForeground = !wasActive && isNowActive
+
+      appState.current = nextAppState
+      setIsInBackground(nextAppState !== "active")
+
+      if (
+        goingToBackground &&
+        (state.kind === "running" || state.kind === "countdown")
+      ) {
+        // App going to background with active timer - schedule next notification
+        scheduleNextSegmentNotification()
+      } else if (comingToForeground) {
+        // App coming to foreground - cancel any pending notifications
+        NotificationService.cancelAllNotifications()
+      }
+    })
+
+    return () => subscription?.remove()
+  }, [state])
+
+  // Helper function to calculate next notification details
+  const getNextNotificationInfo = useCallback(() => {
+    if (!currentTimer.current) return null
+
+    if (state.kind === "countdown") {
+      return {
+        title: currentTimer.current.name,
+        body: "Timer starting now!",
+        seconds: state.remaining,
+      }
+    }
+
+    if (state.kind === "running") {
+      const currentSegment =
+        currentTimer.current.segments[state.segmentIndex || 0]
+      const remainingTime = state.remaining || 0
+
+      return {
+        title: currentTimer.current.name,
+        body: `Round ${state.round}/${currentTimer.current.rounds} - ${currentSegment?.label || "Interval"} ending`,
+        seconds: remainingTime,
+      }
+    }
+
+    return null
+  }, [state, currentTimer])
+
+  // Schedule notification for next segment transition
+  const scheduleNextSegmentNotification = useCallback(async () => {
+    const notificationInfo = getNextNotificationInfo()
+    if (notificationInfo && isInBackground) {
+      await NotificationService.scheduleNextNotification(
+        notificationInfo.title,
+        notificationInfo.body,
+        notificationInfo.seconds,
+      )
+    }
+  }, [getNextNotificationInfo, isInBackground])
 
   // Track previous state to detect segment transitions
   const prevState = useRef<EngineState>({ kind: "idle" })
@@ -173,6 +294,11 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
                 ? Haptics.ImpactFeedbackStyle.Heavy
                 : Haptics.ImpactFeedbackStyle.Light
             await Haptics.impactAsync(pattern)
+          }
+
+          // Schedule next notification if app is in background
+          if (isInBackground) {
+            scheduleNextSegmentNotification()
           }
         }
       }
@@ -229,6 +355,13 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success,
         )
+        // Clean up notifications when timer finishes
+        await NotificationService.cancelAllNotifications()
+
+        // Stop all sounds after a short delay to let completion sound play
+        setTimeout(async () => {
+          await stopAllSounds()
+        }, 3000) // Stop after 3 seconds
       }
 
       prevState.current = s
@@ -236,16 +369,41 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       unsubscribe() // ensure void return
     }
-  }, [engine, play])
+  }, [
+    engine,
+    play,
+    isInBackground,
+    scheduleNextSegmentNotification,
+    stopAllSounds,
+  ])
 
   function loadTimer(t: TimerSpec) {
     currentTimer.current = t
     engine.load(t)
   }
-  const start = () => engine.start()
-  const pause = () => engine.pause()
-  const resume = () => engine.resume()
-  const restart = () => engine.restart()
+
+  const start = () => {
+    engine.start()
+    // Notification scheduling is handled by AppState listener
+  }
+
+  const pause = async () => {
+    await NotificationService.cancelAllNotifications()
+    await stopAllSounds() // Stop any playing sounds when pausing
+    engine.pause()
+  }
+
+  const resume = () => {
+    engine.resume()
+    // Notification rescheduling is handled by AppState listener
+  }
+
+  const restart = async () => {
+    await NotificationService.cancelAllNotifications()
+    await stopAllSounds() // Stop any playing sounds when restarting
+    engine.restart()
+    // Notification scheduling is handled by AppState listener
+  }
 
   return (
     <TimerCtx.Provider

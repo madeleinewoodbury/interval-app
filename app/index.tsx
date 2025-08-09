@@ -164,15 +164,27 @@ export default function TimersScreen() {
           paddingBottom: 8,
         }}
       >
-        <Text
-          style={{
-            color: theme.ui.textPrimary,
-            fontSize: 24,
-            fontWeight: "700",
-          }}
-        >
-          Timers
-        </Text>
+        <View>
+          <Text
+            style={{
+              color: theme.ui.textPrimary,
+              fontSize: 28,
+              fontWeight: "800",
+              marginBottom: 2,
+            }}
+          >
+            Interval Pro
+          </Text>
+          <Text
+            style={{
+              color: theme.ui.textSecondary,
+              fontSize: 16,
+              fontWeight: "500",
+            }}
+          >
+            Timers
+          </Text>
+        </View>
         <Pressable
           onPress={handleAddTimer}
           style={{

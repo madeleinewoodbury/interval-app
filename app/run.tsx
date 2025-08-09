@@ -79,13 +79,23 @@ export default function RunScreen() {
 
   // Track initial segment seconds to compute progress
   const initSeg = React.useRef<number>(0)
+  const currentSegmentIndex = React.useRef<number>(-1)
+
   React.useEffect(() => {
     if (state.kind === "running") {
-      if (state.remaining && state.remaining > initSeg.current)
-        initSeg.current = state.remaining
-      if (initSeg.current === 0) initSeg.current = state.remaining || 1
+      // Reset progress when segment changes
+      if (currentSegmentIndex.current !== state.segmentIndex) {
+        currentSegmentIndex.current = state.segmentIndex
+        const currentSegment = engine.currentSpec?.segments[state.segmentIndex]
+        initSeg.current = currentSegment?.seconds || 1
+      }
+
+      // Fallback if initSeg wasn't set properly
+      if (initSeg.current === 0) {
+        initSeg.current = state.remaining || 1
+      }
     }
-  }, [state])
+  }, [state, engine.currentSpec])
 
   const progress =
     state.kind === "running" && initSeg.current
