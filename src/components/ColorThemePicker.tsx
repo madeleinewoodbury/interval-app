@@ -8,7 +8,10 @@ type Props = {
   onThemeSelect: (theme: ColorThemeOption) => void
 }
 
-export default function ColorThemePicker({ selectedThemeId, onThemeSelect }: Props) {
+export default function ColorThemePicker({
+  selectedThemeId,
+  onThemeSelect,
+}: Props) {
   const theme = neutralTheme
 
   return (
@@ -23,7 +26,7 @@ export default function ColorThemePicker({ selectedThemeId, onThemeSelect }: Pro
       >
         Color Theme
       </Text>
-      
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -31,7 +34,7 @@ export default function ColorThemePicker({ selectedThemeId, onThemeSelect }: Pro
       >
         {COLOR_THEMES.map((colorTheme) => {
           const isSelected = selectedThemeId === colorTheme.id
-          
+
           return (
             <Pressable
               key={colorTheme.id}
@@ -40,22 +43,24 @@ export default function ColorThemePicker({ selectedThemeId, onThemeSelect }: Pro
                 width: 120,
                 borderRadius: 12,
                 padding: 12,
-                backgroundColor: isSelected 
+                backgroundColor: isSelected
                   ? theme.ui.accent + "20" // Add transparency
                   : theme.ui.cardBackground,
                 borderWidth: isSelected ? 2 : 1,
-                borderColor: isSelected 
-                  ? theme.ui.accent 
+                borderColor: isSelected
+                  ? theme.ui.accent
                   : theme.ui.cardBackground,
               }}
             >
               {/* Color preview */}
-              <View style={{ 
-                flexDirection: "row", 
-                marginBottom: 8,
-                gap: 4,
-                justifyContent: "center",
-              }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  marginBottom: 8,
+                  gap: 4,
+                  justifyContent: "center",
+                }}
+              >
                 <View
                   style={{
                     width: 20,
@@ -73,7 +78,7 @@ export default function ColorThemePicker({ selectedThemeId, onThemeSelect }: Pro
                   }}
                 />
               </View>
-              
+
               {/* Theme name */}
               <Text
                 style={{
@@ -86,7 +91,7 @@ export default function ColorThemePicker({ selectedThemeId, onThemeSelect }: Pro
               >
                 {colorTheme.name}
               </Text>
-              
+
               {/* Theme description */}
               <Text
                 style={{
@@ -103,14 +108,16 @@ export default function ColorThemePicker({ selectedThemeId, onThemeSelect }: Pro
           )
         })}
       </ScrollView>
-      
+
       {selectedThemeId && (
-        <View style={{ 
-          marginTop: 12, 
-          padding: 12, 
-          backgroundColor: theme.ui.cardBackground,
-          borderRadius: 8,
-        }}>
+        <View
+          style={{
+            marginTop: 12,
+            padding: 12,
+            backgroundColor: theme.ui.cardBackground,
+            borderRadius: 8,
+          }}
+        >
           <Text
             style={{
               color: theme.ui.textSecondary,
@@ -120,7 +127,7 @@ export default function ColorThemePicker({ selectedThemeId, onThemeSelect }: Pro
           >
             Work intervals will use{" "}
             <Text style={{ fontWeight: "600" }}>
-              {COLOR_THEMES.find(t => t.id === selectedThemeId)?.name}
+              {COLOR_THEMES.find((t) => t.id === selectedThemeId)?.name}
             </Text>{" "}
             colors
           </Text>

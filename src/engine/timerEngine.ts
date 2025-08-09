@@ -146,6 +146,18 @@ export class TimerEngine {
 
   private advance() {
     if (!this.spec) return
+
+    // Check if we're in the last round and just finished the work segment
+    // (assuming work is always the first segment, rest is second)
+    const isLastRound = this.round === this.spec.rounds
+    const justFinishedWork = this.segIdx === 0 && this.spec.segments.length > 1
+
+    if (isLastRound && justFinishedWork) {
+      // Skip the rest interval after the final work interval
+      this.finish()
+      return
+    }
+
     if (this.segIdx < this.spec.segments.length - 1) {
       this.segIdx++
     } else {

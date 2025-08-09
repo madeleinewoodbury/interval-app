@@ -42,7 +42,7 @@ export default function CreateTimerScreen() {
 
   const isEditing = !!editingTimerId
 
-  // Load existing timer data if editing
+  // Load existing timer data if editing, or clear fields if creating new
   useEffect(() => {
     if (isEditing && editingTimerId) {
       const existingTimer = getTimer(editingTimerId)
@@ -76,6 +76,15 @@ export default function CreateTimerScreen() {
           }
         }
       }
+    } else {
+      // Clear fields when creating new timer
+      setName("")
+      setWorkMinutes("0")
+      setWorkSeconds("20")
+      setRestMinutes("0")
+      setRestSeconds("10")
+      setRounds("8")
+      setSelectedTheme(DEFAULT_COLOR_THEME)
     }
   }, [isEditing, editingTimerId, getTimer])
 

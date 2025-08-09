@@ -114,7 +114,10 @@ export default function RunScreen() {
   })()
 
   const sub = (() => {
-    if (state.kind === "running") return `Round ${state.round}`
+    if (state.kind === "running") {
+      const totalRounds = engine.currentSpec?.rounds || 1
+      return `Round ${state.round} of ${totalRounds}`
+    }
     if (state.kind === "paused") return "Paused"
     if (state.kind === "countdown") return "Get Ready"
     if (state.kind === "finished") return "Great work"
@@ -179,60 +182,48 @@ export default function RunScreen() {
             onPress={pause}
             style={{
               paddingVertical: 14,
-              paddingHorizontal: 24,
+              paddingHorizontal: 18,
               backgroundColor: currentTheme.ui.buttonPrimary,
               borderRadius: 14,
             }}
           >
-            <Text
-              style={{
-                color: currentTheme.ui.textPrimary,
-                fontWeight: "800",
-                fontSize: 18,
-              }}
-            >
-              Pause
-            </Text>
+            <AntDesign
+              name="pausecircleo"
+              size={24}
+              color={currentTheme.ui.textPrimary}
+            />
           </Pressable>
         ) : state.kind === "paused" ? (
           <Pressable
             onPress={resume}
             style={{
               paddingVertical: 14,
-              paddingHorizontal: 24,
+              paddingHorizontal: 18,
               backgroundColor: currentTheme.ui.success,
               borderRadius: 14,
             }}
           >
-            <Text
-              style={{
-                color: currentTheme.ui.textPrimary,
-                fontWeight: "800",
-                fontSize: 18,
-              }}
-            >
-              Resume
-            </Text>
+            <AntDesign
+              name="playcircleo"
+              size={24}
+              color={currentTheme.ui.textPrimary}
+            />
           </Pressable>
         ) : (
           <Pressable
             onPress={start}
             style={{
               paddingVertical: 14,
-              paddingHorizontal: 24,
+              paddingHorizontal: 18,
               backgroundColor: currentTheme.ui.success,
               borderRadius: 14,
             }}
           >
-            <Text
-              style={{
-                color: currentTheme.ui.textPrimary,
-                fontWeight: "800",
-                fontSize: 18,
-              }}
-            >
-              Start
-            </Text>
+            <AntDesign
+              name="playcircleo"
+              size={24}
+              color={currentTheme.ui.textPrimary}
+            />
           </Pressable>
         )}
       </View>
