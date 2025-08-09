@@ -5,14 +5,17 @@ import React, {
   useRef,
   useState,
   useCallback,
+  useEffect,
 } from "react"
 import { useKeepAwake } from "expo-keep-awake"
 import * as Haptics from "expo-haptics"
 import { Audio, AVPlaybackSource } from "expo-av"
 import { TimerEngine } from "../engine/timerEngine"
 import { EngineState, TimerSpec } from "../types"
+import { TimerStorage } from "../services/TimerStorage"
 
 type Ctx = {
+  // Timer engine
   engine: TimerEngine
   state: EngineState
   loadTimer: (t: TimerSpec) => void
@@ -20,6 +23,15 @@ type Ctx = {
   pause: () => void
   resume: () => void
   restart: () => void
+
+  // Timer management
+  timers: TimerSpec[]
+  loadingTimers: boolean
+  refreshTimers: () => Promise<void>
+  saveTimer: (timer: TimerSpec) => Promise<void>
+  updateTimer: (id: string, timer: TimerSpec) => Promise<void>
+  deleteTimer: (id: string) => Promise<void>
+  getTimer: (id: string) => TimerSpec | undefined
 }
 
 const TimerCtx = createContext<Ctx | null>(null)
@@ -43,6 +55,10 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [state, setState] = useState<EngineState>({ kind: "idle" })
   const currentTimer = useRef<TimerSpec | null>(null)
 
+  // Timer management state
+  const [timers, setTimers] = useState<TimerSpec[]>([])
+  const [loadingTimers, setLoadingTimers] = useState(true)
+
   // preload sounds on first use
   const soundCache = useRef<Record<string, Audio.Sound | null>>({})
 
@@ -54,6 +70,72 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
       soundCache.current[key] = snd
     }
     await soundCache.current[key]?.replayAsync()
+  }, [])
+
+  // Timer management functions
+  const refreshTimers = useCallback(async () => {
+    try {
+      setLoadingTimers(true)
+      const savedTimers = await TimerStorage.getTimers()
+      setTimers(savedTimers)
+    } catch (error) {
+      console.error("Error loading timers:", error)
+      // Set empty array on error
+      setTimers([])
+    } finally {
+      setLoadingTimers(false)
+    }
+  }, [])
+
+  const saveTimer = useCallback(
+    async (timer: TimerSpec) => {
+      try {
+        await TimerStorage.addTimer(timer)
+        await refreshTimers() // Refresh the list
+      } catch (error) {
+        console.error("Error saving timer:", error)
+        throw error
+      }
+    },
+    [refreshTimers],
+  )
+
+  const updateTimer = useCallback(
+    async (id: string, timer: TimerSpec) => {
+      try {
+        await TimerStorage.updateTimer(id, timer)
+        await refreshTimers() // Refresh the list
+      } catch (error) {
+        console.error("Error updating timer:", error)
+        throw error
+      }
+    },
+    [refreshTimers],
+  )
+
+  const deleteTimer = useCallback(
+    async (id: string) => {
+      try {
+        await TimerStorage.deleteTimer(id)
+        await refreshTimers() // Refresh the list
+      } catch (error) {
+        console.error("Error deleting timer:", error)
+        throw error
+      }
+    },
+    [refreshTimers],
+  )
+
+  const getTimer = useCallback(
+    (id: string): TimerSpec | undefined => {
+      return timers.find((t) => t.id === id)
+    },
+    [timers],
+  )
+
+  // Load timers on app start
+  useEffect(() => {
+    refreshTimers()
   }, [])
 
   // Track previous state to detect segment transitions
@@ -167,7 +249,22 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <TimerCtx.Provider
-      value={{ engine, state, loadTimer, start, pause, resume, restart }}
+      value={{
+        engine,
+        state,
+        loadTimer,
+        start,
+        pause,
+        resume,
+        restart,
+        timers,
+        loadingTimers,
+        refreshTimers,
+        saveTimer,
+        updateTimer,
+        deleteTimer,
+        getTimer,
+      }}
     >
       {children}
     </TimerCtx.Provider>

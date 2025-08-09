@@ -9,6 +9,13 @@ export default function Layout() {
         <Tabs screenOptions={{ headerTitleAlign: "center" }}>
           <Tabs.Screen name="index" options={{ title: "Timers" }} />
           <Tabs.Screen name="run" options={{ title: "Run" }} />
+          <Tabs.Screen
+            name="create-timer"
+            options={{
+              title: "Create Timer",
+              href: null, // Hide from tab bar
+            }}
+          />
         </Tabs>
       </TimerProvider>
     </GestureHandlerRootView>

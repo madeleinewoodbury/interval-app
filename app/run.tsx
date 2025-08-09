@@ -1,16 +1,19 @@
 import React from "react"
 import { SafeAreaView, Text, View, Pressable } from "react-native"
 import { useTimer } from "../src/context/TimerProvider"
-import { generateThemeFromTimer, neutralTheme } from "../src/utils/themeGenerator"
+import {
+  generateThemeFromTimer,
+  neutralTheme,
+} from "../src/utils/themeGenerator"
 import ProgressRing from "../src/components/ProgressRing"
 import * as Haptics from "expo-haptics"
 import { AntDesign } from "@expo/vector-icons"
 
 export default function RunScreen() {
   const { state, start, pause, resume, restart, engine } = useTimer()
-  
+
   // Generate theme from current timer, fallback to neutral if no timer loaded
-  const currentTheme = engine.currentSpec 
+  const currentTheme = engine.currentSpec
     ? generateThemeFromTimer(engine.currentSpec)
     : neutralTheme
 
@@ -19,7 +22,7 @@ export default function RunScreen() {
       // Get current segment to determine work/rest colors
       const currentSegment = engine.currentSpec?.segments[state.segmentIndex]
       if (currentSegment) {
-        return currentSegment.id === "work" 
+        return currentSegment.id === "work"
           ? currentTheme.work.background
           : currentTheme.rest.background
       }
@@ -164,7 +167,11 @@ export default function RunScreen() {
             borderRadius: 12,
           }}
         >
-          <AntDesign name="reload1" size={20} color={currentTheme.ui.textPrimary} />
+          <AntDesign
+            name="reload1"
+            size={20}
+            color={currentTheme.ui.textPrimary}
+          />
         </Pressable>
 
         {state.kind === "running" ? (
@@ -177,7 +184,13 @@ export default function RunScreen() {
               borderRadius: 14,
             }}
           >
-            <Text style={{ color: currentTheme.ui.textPrimary, fontWeight: "800", fontSize: 18 }}>
+            <Text
+              style={{
+                color: currentTheme.ui.textPrimary,
+                fontWeight: "800",
+                fontSize: 18,
+              }}
+            >
               Pause
             </Text>
           </Pressable>
@@ -191,7 +204,13 @@ export default function RunScreen() {
               borderRadius: 14,
             }}
           >
-            <Text style={{ color: currentTheme.ui.textPrimary, fontWeight: "800", fontSize: 18 }}>
+            <Text
+              style={{
+                color: currentTheme.ui.textPrimary,
+                fontWeight: "800",
+                fontSize: 18,
+              }}
+            >
               Resume
             </Text>
           </Pressable>
@@ -205,7 +224,13 @@ export default function RunScreen() {
               borderRadius: 14,
             }}
           >
-            <Text style={{ color: currentTheme.ui.textPrimary, fontWeight: "800", fontSize: 18 }}>
+            <Text
+              style={{
+                color: currentTheme.ui.textPrimary,
+                fontWeight: "800",
+                fontSize: 18,
+              }}
+            >
               Start
             </Text>
           </Pressable>
