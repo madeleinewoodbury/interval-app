@@ -11,6 +11,10 @@ export class TimerEngine {
   private round = 1
   private remaining = 0
 
+  get currentSpec(): TimerSpec | null {
+    return this.spec
+  }
+
   subscribe(fn: Listener) {
     this.listeners.add(fn)
     fn(this.state)

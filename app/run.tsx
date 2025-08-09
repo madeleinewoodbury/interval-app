@@ -1,18 +1,70 @@
 import React from "react"
 import { SafeAreaView, Text, View, Pressable } from "react-native"
 import { useTimer } from "../src/context/TimerProvider"
+import { generateThemeFromTimer, neutralTheme } from "../src/utils/themeGenerator"
 import ProgressRing from "../src/components/ProgressRing"
 import * as Haptics from "expo-haptics"
 import { AntDesign } from "@expo/vector-icons"
 
 export default function RunScreen() {
-  const { state, start, pause, resume, restart } = useTimer()
+  const { state, start, pause, resume, restart, engine } = useTimer()
+  
+  // Generate theme from current timer, fallback to neutral if no timer loaded
+  const currentTheme = engine.currentSpec 
+    ? generateThemeFromTimer(engine.currentSpec)
+    : neutralTheme
 
   const bgColor = (() => {
-    if (state.kind === "running") return undefined // set below per segment via label color? kept simple
-    if (state.kind === "countdown") return "#111827"
-    if (state.kind === "finished") return "#065F46"
-    return "#0B0B0F"
+    if (state.kind === "running") {
+      // Get current segment to determine work/rest colors
+      const currentSegment = engine.currentSpec?.segments[state.segmentIndex]
+      if (currentSegment) {
+        return currentSegment.id === "work" 
+          ? currentTheme.work.background
+          : currentTheme.rest.background
+      }
+      return currentTheme.ui.background
+    }
+    if (state.kind === "countdown") return currentTheme.states.countdown
+    if (state.kind === "finished") return currentTheme.states.finished
+    if (state.kind === "paused") return currentTheme.states.paused
+    return currentTheme.ui.background
+  })()
+
+  const textColor = (() => {
+    if (state.kind === "running") {
+      const currentSegment = engine.currentSpec?.segments[state.segmentIndex]
+      if (currentSegment) {
+        return currentSegment.id === "work"
+          ? currentTheme.work.text
+          : currentTheme.rest.text
+      }
+    }
+    return currentTheme.ui.textPrimary
+  })()
+
+  const textSecondaryColor = (() => {
+    if (state.kind === "running") {
+      const currentSegment = engine.currentSpec?.segments[state.segmentIndex]
+      if (currentSegment) {
+        return currentSegment.id === "work"
+          ? currentTheme.work.textSecondary
+          : currentTheme.rest.textSecondary
+      }
+    }
+    return currentTheme.ui.textSecondary
+  })()
+
+  const ringColor = (() => {
+    if (state.kind === "running") {
+      const currentSegment = engine.currentSpec?.segments[state.segmentIndex]
+      if (currentSegment) {
+        return currentSegment.id === "work"
+          ? currentTheme.work.text
+          : currentTheme.rest.text
+      }
+    }
+    return currentTheme.ui.accent
   })()
 
   // crude progress: remaining / segment seconds
@@ -80,11 +132,11 @@ export default function RunScreen() {
           size={260}
           stroke={10}
           progress={Math.max(0, Math.min(1, progress))}
-          color="#60A5FA"
+          color={ringColor}
         />
         <Text
           style={{
-            color: "white",
+            color: textColor,
             fontSize: 96,
             fontWeight: "800",
             letterSpacing: 1,
@@ -92,7 +144,7 @@ export default function RunScreen() {
         >
           {big}
         </Text>
-        <Text style={{ color: "#9CA3AF", fontSize: 18 }}>{sub}</Text>
+        <Text style={{ color: textSecondaryColor, fontSize: 18 }}>{sub}</Text>
       </View>
 
       <View
@@ -108,11 +160,11 @@ export default function RunScreen() {
           style={{
             paddingVertical: 14,
             paddingHorizontal: 18,
-            backgroundColor: "#1F2937",
+            backgroundColor: currentTheme.ui.buttonSecondary,
             borderRadius: 12,
           }}
         >
-          <AntDesign name="reload1" size={20} color="white" />
+          <AntDesign name="reload1" size={20} color={currentTheme.ui.textPrimary} />
         </Pressable>
 
         {state.kind === "running" ? (
@@ -121,11 +173,11 @@ export default function RunScreen() {
             style={{
               paddingVertical: 14,
               paddingHorizontal: 24,
-              backgroundColor: "#2563EB",
+              backgroundColor: currentTheme.ui.buttonPrimary,
               borderRadius: 14,
             }}
           >
-            <Text style={{ color: "white", fontWeight: "800", fontSize: 18 }}>
+            <Text style={{ color: currentTheme.ui.textPrimary, fontWeight: "800", fontSize: 18 }}>
               Pause
             </Text>
           </Pressable>
@@ -135,11 +187,11 @@ export default function RunScreen() {
             style={{
               paddingVertical: 14,
               paddingHorizontal: 24,
-              backgroundColor: "#10B981",
+              backgroundColor: currentTheme.ui.success,
               borderRadius: 14,
             }}
           >
-            <Text style={{ color: "white", fontWeight: "800", fontSize: 18 }}>
+            <Text style={{ color: currentTheme.ui.textPrimary, fontWeight: "800", fontSize: 18 }}>
               Resume
             </Text>
           </Pressable>
@@ -149,11 +201,11 @@ export default function RunScreen() {
             style={{
               paddingVertical: 14,
               paddingHorizontal: 24,
-              backgroundColor: "#10B981",
+              backgroundColor: currentTheme.ui.success,
               borderRadius: 14,
             }}
           >
-            <Text style={{ color: "white", fontWeight: "800", fontSize: 18 }}>
+            <Text style={{ color: currentTheme.ui.textPrimary, fontWeight: "800", fontSize: 18 }}>
               Start
             </Text>
           </Pressable>

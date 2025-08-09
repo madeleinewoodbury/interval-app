@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native"
 import { useRouter } from "expo-router"
 import { useTimer } from "../src/context/TimerProvider"
+import { neutralTheme } from "../src/utils/themeGenerator"
 import { TimerSpec } from "../src/types"
 import { AntDesign } from "@expo/vector-icons"
 
@@ -36,9 +37,21 @@ export default function TimersScreen() {
   const { loadTimer } = useTimer()
   const router = useRouter()
 
+  // Use neutral theme for index screen
+  const theme = neutralTheme
+
   return (
-    <View style={{ flex: 1, padding: 16, gap: 12, backgroundColor: "#0B0B0F" }}>
-      <Text style={{ color: "white", fontSize: 24, fontWeight: "700" }}>
+    <View
+      style={{
+        flex: 1,
+        padding: 16,
+        gap: 12,
+        backgroundColor: theme.ui.background,
+      }}
+    >
+      <Text
+        style={{ color: theme.ui.textPrimary, fontSize: 24, fontWeight: "700" }}
+      >
         Timers
       </Text>
 
@@ -50,24 +63,45 @@ export default function TimersScreen() {
         style={{
           padding: 16,
           borderRadius: 12,
-          backgroundColor: "#1F2937",
+          backgroundColor: theme.ui.cardBackground,
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
+          borderLeftWidth: 4,
+          borderLeftColor: TABATA.segments[0]?.color || theme.ui.accent,
         }}
       >
         <View>
-          <Text style={{ color: "white", fontSize: 18, fontWeight: "600" }}>
+          <Text
+            style={{
+              color: theme.ui.textPrimary,
+              fontSize: 18,
+              fontWeight: "600",
+            }}
+          >
             {TABATA.name}
           </Text>
-          <Text style={{ color: "#9CA3AF", marginTop: 4 }}>
+          <Text style={{ color: theme.ui.textSecondary, marginTop: 4 }}>
             {TABATA.segments.map((s) => `${s.label} ${s.seconds}s`).join(" / ")}
           </Text>
+          <View style={{ flexDirection: "row", marginTop: 6, gap: 8 }}>
+            {TABATA.segments.map((segment) => (
+              <View
+                key={segment.id}
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 6,
+                  backgroundColor: segment.color,
+                }}
+              />
+            ))}
+          </View>
         </View>
-        <AntDesign name="right" size={20} color="#60A5FA" />
+        <AntDesign name="right" size={20} color={theme.ui.accent} />
       </Pressable>
 
-      {/* Add a “+ New Timer” later */}
+      {/* Add a "+ New Timer" later */}
     </View>
   )
 }

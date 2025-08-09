@@ -65,18 +65,26 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
       setState(s)
 
       // Play beep_1 when timer starts (countdown to running transition)
-      if (s.kind === "running" && prev.kind === "countdown" && currentTimer.current) {
+      if (
+        s.kind === "running" &&
+        prev.kind === "countdown" &&
+        currentTimer.current
+      ) {
         await play("beep_1")
       }
 
       // Play beep_1 on segment transitions (end of intervals)
-      if (s.kind === "running" && prev.kind === "running" && currentTimer.current) {
+      if (
+        s.kind === "running" &&
+        prev.kind === "running" &&
+        currentTimer.current
+      ) {
         const spec = currentTimer.current
-        
+
         // Check if we transitioned to a different segment
         if (prev.segmentIndex !== s.segmentIndex) {
           await play("beep_1")
-          
+
           if (spec.options?.haptics && spec.options.haptics !== "off") {
             const pattern =
               spec.options.haptics === "strong"
@@ -90,22 +98,36 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
       // Play beep_2 at 3, 2, and 1 seconds remaining during initial countdown
       if (s.kind === "countdown" && currentTimer.current) {
         // Play beep when countdown shows 3 (either first time or transition to 3)
-        if ((prev.kind !== "countdown" && s.remaining <= 3) || 
-            (prev.kind === "countdown" && prev.remaining > 3 && s.remaining <= 3)) {
+        if (
+          (prev.kind !== "countdown" && s.remaining <= 3) ||
+          (prev.kind === "countdown" && prev.remaining > 3 && s.remaining <= 3)
+        ) {
           await play("beep_2")
         }
         // Play beep when countdown shows 2
-        if (prev.kind === "countdown" && prev.remaining > 2 && s.remaining <= 2) {
+        if (
+          prev.kind === "countdown" &&
+          prev.remaining > 2 &&
+          s.remaining <= 2
+        ) {
           await play("beep_2")
         }
         // Play beep when countdown shows 1
-        if (prev.kind === "countdown" && prev.remaining > 1 && s.remaining <= 1) {
+        if (
+          prev.kind === "countdown" &&
+          prev.remaining > 1 &&
+          s.remaining <= 1
+        ) {
           await play("beep_2")
         }
       }
 
       // Play beep_2 at 3, 2, and 1 seconds remaining in any segment
-      if (s.kind === "running" && prev.kind === "running" && currentTimer.current) {
+      if (
+        s.kind === "running" &&
+        prev.kind === "running" &&
+        currentTimer.current
+      ) {
         // 3 seconds remaining
         if (prev.remaining > 3 && s.remaining <= 3) {
           await play("beep_2")
