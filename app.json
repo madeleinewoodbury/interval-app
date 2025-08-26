@@ -14,6 +14,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "bundleIdentifier": "com.woodburydev.intervaltrainer",
       "supportsTablet": true,
       "infoPlist": {
         "UIBackgroundModes": ["audio"]
