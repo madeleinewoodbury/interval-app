@@ -2,6 +2,14 @@ import * as Notifications from "expo-notifications"
 import * as Device from "expo-device"
 import { Platform } from "react-native"
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+})
+
 // Simple notification service following Taskly pattern
 export class NotificationService {
   private static currentNotificationId: string | undefined
@@ -49,6 +57,7 @@ export class NotificationService {
           sound: true, // Let system handle sound for notifications
         },
         trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: Math.max(1, seconds),
           channelId: "interval-timer",
         },
@@ -77,6 +86,7 @@ export class NotificationService {
             sound: true,
           },
           trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
             seconds: Math.max(1, Math.floor(e.seconds)),
             channelId: "interval-timer",
           },

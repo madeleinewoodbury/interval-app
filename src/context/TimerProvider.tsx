@@ -11,7 +11,7 @@ import { useKeepAwake } from "expo-keep-awake"
 import { AppState, Alert } from "react-native"
 import * as Haptics from "expo-haptics"
 import * as Device from "expo-device"
-import { Audio, AVPlaybackSource } from "expo-av"
+import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from "expo-audio"
 import { TimerEngine } from "../engine/timerEngine"
 import { EngineState, TimerSpec } from "../types"
 import { TimerStorage } from "../services/TimerStorage"
@@ -47,7 +47,7 @@ export const useTimer = () => {
   return v
 }
 
-const soundMap: Record<string, AVPlaybackSource> = {
+const soundMap: Record<string, number> = {
   beep_1: require("../../assets/sounds/beep_1.mp3"),
   beep_2: require("../../assets/sounds/beep_2.mp3"),
   completed: require("../../assets/sounds/completed.mp3"),
@@ -69,58 +69,45 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // App state management
   const appState = useRef(AppState.currentState)
-  const [isInBackground, setIsInBackground] = useState(false)
   const backgroundAt = useRef<number | null>(null)
+  const latestState = useRef<EngineState>({ kind: "idle" })
 
-  // preload sounds on first use
-  const soundCache = useRef<Record<string, Audio.Sound | null>>({})
+  // Audio players (pre-created on mount)
+  const soundCache = useRef<Record<string, AudioPlayer | null>>({})
+
+  // Pre-create audio players on mount
+  useEffect(() => {
+    for (const key of Object.keys(soundMap)) {
+      soundCache.current[key] = createAudioPlayer(soundMap[key])
+    }
+    return () => {
+      for (const player of Object.values(soundCache.current)) {
+        player?.remove()
+      }
+      soundCache.current = {}
+    }
+  }, [])
 
   const play = useCallback(async (key?: string) => {
     if (!key) return
     try {
-      // Always recreate the sound to avoid seeking issues
-      if (soundCache.current[key]) {
-        try {
-          await soundCache.current[key]?.unloadAsync()
-        } catch {
-          // Ignore unload errors
-        }
+      const player = soundCache.current[key]
+      if (player) {
+        await player.seekTo(0)
+        player.play()
       }
-
-      // Create fresh sound instance
-      const snd = new Audio.Sound()
-      await snd.loadAsync(soundMap[key])
-      soundCache.current[key] = snd
-
-      // Play the fresh sound
-      await snd.playAsync()
     } catch (error) {
       console.error(`Error playing sound ${key}:`, error)
     }
   }, [])
 
   const stopAllSounds = useCallback(async () => {
-    try {
-      const soundPromises = Object.values(soundCache.current).map(
-        async (sound) => {
-          if (sound) {
-            try {
-              const status = await sound.getStatusAsync()
-              // Only stop if it's loaded and playing
-              if (status.isLoaded && status.isPlaying) {
-                await sound.stopAsync()
-              }
-            } catch (stopError) {
-              // Ignore individual sound stop errors
-              console.warn("Could not stop individual sound:", stopError)
-            }
-          }
-        },
-      )
-      await Promise.all(soundPromises)
-      console.log("Stopped all sounds")
-    } catch (error) {
-      console.error("Error stopping sounds:", error)
+    for (const player of Object.values(soundCache.current)) {
+      try {
+        player?.pause()
+      } catch {
+        /* ignore */
+      }
     }
   }, [])
 
@@ -200,17 +187,15 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     initializeApp()
   }, [refreshTimers])
 
-  // Configure audio mode so short sounds can still play (where supported) & allow in silent mode
+  // Configure audio mode so sounds play in silent mode and background
   useEffect(() => {
     ;(async () => {
       try {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          // allow haptics + sound in silent and attempt to keep active
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: true,
+          interruptionMode: "duckOthers",
+          shouldRouteThroughEarpiece: false,
         })
       } catch (e) {
         console.warn("Failed to set audio mode", e)
@@ -224,16 +209,15 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Schedule notifications for each remaining segment boundary (work/rest) plus completion
   const scheduleAllRemainingSegmentNotifications = useCallback(async () => {
-    if (!isInBackground) return
     const spec = currentTimer.current
     if (!spec) return
-    if (!(state.kind === "running" || state.kind === "paused")) return
+    const s = latestState.current
+    if (!(s.kind === "running" || s.kind === "paused")) return
     const entries: { title: string; body: string; seconds: number }[] = []
     // build boundaries for remaining segments
-    let offset = state.remaining // time until current segment ends
-    const startRound = state.round
-    let segIdx = state.segmentIndex
-    let round = startRound
+    let offset = s.remaining // time until current segment ends
+    let segIdx = s.segmentIndex
+    let round = s.round
     // Helper to push entry for current boundary
     function push(boundLabel: string, secs: number) {
       if (!spec) return
@@ -265,34 +249,34 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     if (entries.length) entries[entries.length - 1].body = "Timer finished"
     await NotificationService.cancelAllNotifications()
     await NotificationService.scheduleMultiple(entries)
-  }, [isInBackground, state])
+  }, [])
 
-  // App state listener for background/foreground detection (placed after scheduleCompletionNotification definition)
+  // App state listener for background/foreground detection
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextAppState) => {
-      const wasActive = appState.current === "active"
-      const isNowActive = nextAppState === "active"
-      const goingToBackground = wasActive && !isNowActive
-      const comingToForeground = !wasActive && isNowActive
+    const subscription = AppState.addEventListener(
+      "change",
+      async (nextAppState) => {
+        const wasActive = appState.current === "active"
+        const isNowActive = nextAppState === "active"
+        const goingToBackground = wasActive && !isNowActive
+        const comingToForeground = !wasActive && isNowActive
 
-      appState.current = nextAppState
-      setIsInBackground(nextAppState !== "active")
+        appState.current = nextAppState
 
-      if (goingToBackground) {
-        NotificationService.cancelAllNotifications()
-        // comprehensive schedule (segment boundaries + completion)
-        scheduleAllRemainingSegmentNotifications()
-        backgroundAt.current = Date.now()
-      } else if (comingToForeground) {
-        NotificationService.cancelAllNotifications()
-        // Fast-forward engine based on elapsed time while backgrounded
-        if (backgroundAt.current && currentTimer.current) {
-          const elapsed = Date.now() - backgroundAt.current
-          backgroundAt.current = null
-          engine.fastForward(elapsed)
+        if (goingToBackground) {
+          backgroundAt.current = Date.now()
+          await NotificationService.cancelAllNotifications()
+          await scheduleAllRemainingSegmentNotifications()
+        } else if (comingToForeground) {
+          await NotificationService.cancelAllNotifications()
+          if (backgroundAt.current && currentTimer.current) {
+            const elapsed = Date.now() - backgroundAt.current
+            backgroundAt.current = null
+            engine.fastForward(elapsed)
+          }
         }
-      }
-    })
+      },
+    )
     return () => subscription.remove()
   }, [scheduleAllRemainingSegmentNotifications, engine])
 
@@ -303,6 +287,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     const unsubscribe = engine.subscribe(async (s) => {
       const prev = prevState.current
       setState(s)
+      latestState.current = s
 
       // Play beep_1 when timer starts (countdown -> running)
       if (
