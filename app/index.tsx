@@ -223,7 +223,7 @@ export default function TimersScreen() {
             }}
           >
             <AntDesign
-              name="clockcircleo"
+              name="clock-circle"
               size={48}
               color={theme.ui.textSecondary}
             />

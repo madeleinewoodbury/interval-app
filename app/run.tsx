@@ -183,7 +183,7 @@ export default function RunScreen() {
           }}
         >
           <AntDesign
-            name="reload1"
+            name="reload"
             size={20}
             color={currentTheme.ui.textPrimary}
           />
@@ -200,7 +200,7 @@ export default function RunScreen() {
             }}
           >
             <AntDesign
-              name="pausecircleo"
+              name="pause-circle"
               size={24}
               color={currentTheme.ui.textPrimary}
             />
@@ -216,7 +216,7 @@ export default function RunScreen() {
             }}
           >
             <AntDesign
-              name="playcircleo"
+              name="play-circle"
               size={24}
               color={currentTheme.ui.textPrimary}
             />
@@ -232,7 +232,7 @@ export default function RunScreen() {
             }}
           >
             <AntDesign
-              name="playcircleo"
+              name="play-circle"
               size={24}
               color={currentTheme.ui.textPrimary}
             />

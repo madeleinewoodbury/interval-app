@@ -39,7 +39,7 @@ export default function Layout() {
               options={{
                 title: "Timers",
                 tabBarIcon: ({ color, size }) => (
-                  <AntDesign name="clockcircleo" size={size} color={color} />
+                  <AntDesign name="clock-circle" size={size} color={color} />
                 ),
               }}
             />
@@ -48,7 +48,7 @@ export default function Layout() {
               options={{
                 title: "Run",
                 tabBarIcon: ({ color, size }) => (
-                  <AntDesign name="play" size={size} color={color} />
+                  <AntDesign name="play-circle" size={size} color={color} />
                 ),
               }}
             />
