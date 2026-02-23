@@ -432,9 +432,11 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         start()
         return
       }
-      // load timers list if empty
-      if (!timers.length) {
-        await refreshTimers()
+      let availableTimers = timers
+      // load timers list directly if empty to avoid stale closure usage
+      if (!availableTimers.length) {
+        availableTimers = await TimerStorage.getTimers()
+        setTimers(availableTimers)
       }
       let id: string | null = null
       try {
@@ -442,10 +444,10 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch {}
       let timerToUse: TimerSpec | undefined
       if (id) {
-        timerToUse = timers.find((t) => t.id === id)
+        timerToUse = availableTimers.find((t) => t.id === id)
       }
       if (!timerToUse) {
-        timerToUse = timers[0]
+        timerToUse = availableTimers[0]
       }
       if (timerToUse) {
         loadTimer(timerToUse)
@@ -454,7 +456,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (e) {
       console.warn("Failed to start last or first timer", e)
     }
-  }, [timers, refreshTimers, loadTimer, start])
+  }, [timers, loadTimer, start])
 
   const pause = async () => {
     await NotificationService.cancelAllNotifications()

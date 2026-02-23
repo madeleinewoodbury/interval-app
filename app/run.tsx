@@ -1,5 +1,6 @@
 import React, { useEffect } from "react"
 import { SafeAreaView, Text, View, Pressable } from "react-native"
+import { useRouter } from "expo-router"
 import { useTimer } from "../src/context/TimerProvider"
 import {
   generateThemeFromTimer,
@@ -10,14 +11,34 @@ import * as Haptics from "expo-haptics"
 import { AntDesign } from "@expo/vector-icons"
 
 export default function RunScreen() {
-  const { state, start, pause, resume, restart, engine, startLastOrFirst } =
-    useTimer()
+  const {
+    state,
+    start,
+    pause,
+    resume,
+    restart,
+    engine,
+    startLastOrFirst,
+    timers,
+    loadingTimers,
+  } = useTimer()
+  const router = useRouter()
+  const attemptedAutoStart = React.useRef(false)
+
   // Auto-start last or first timer when entering Run tab if idle
   useEffect(() => {
-    if (state.kind === "idle") {
+    if (state.kind !== "idle") {
+      attemptedAutoStart.current = false
+      return
+    }
+    if (loadingTimers) return
+    if (attemptedAutoStart.current) return
+
+    attemptedAutoStart.current = true
+    if (!engine.currentSpec && timers.length > 0) {
       startLastOrFirst()
     }
-  }, [state.kind, startLastOrFirst])
+  }, [state.kind, loadingTimers, timers.length, engine, startLastOrFirst])
 
   // Generate theme from current timer, fallback to neutral if no timer loaded
   const currentTheme = engine.currentSpec
@@ -135,6 +156,66 @@ export default function RunScreen() {
     if (state.kind === "finished") return "Great work"
     return ""
   })()
+
+  const hasNoTimers =
+    !loadingTimers && timers.length === 0 && !engine.currentSpec
+
+  if (hasNoTimers) {
+    return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: currentTheme.ui.background }}
+      >
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 24,
+            gap: 12,
+          }}
+        >
+          <Text
+            style={{
+              color: currentTheme.ui.textPrimary,
+              fontSize: 28,
+              fontWeight: "800",
+            }}
+          >
+            No timer to run
+          </Text>
+          <Text
+            style={{
+              color: currentTheme.ui.textSecondary,
+              fontSize: 16,
+              textAlign: "center",
+            }}
+          >
+            Create a timer first, then come back to Run.
+          </Text>
+          <Pressable
+            onPress={() => router.push("/create-timer")}
+            style={{
+              marginTop: 8,
+              paddingVertical: 14,
+              paddingHorizontal: 18,
+              backgroundColor: currentTheme.ui.buttonPrimary,
+              borderRadius: 12,
+            }}
+          >
+            <Text
+              style={{
+                color: currentTheme.ui.textPrimary,
+                fontSize: 16,
+                fontWeight: "600",
+              }}
+            >
+              Create Timer
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    )
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
