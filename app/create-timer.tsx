@@ -14,7 +14,6 @@ import { useRouter, useLocalSearchParams } from "expo-router"
 import { useTimer } from "../src/context/TimerProvider"
 import { neutralTheme } from "../src/utils/themeGenerator"
 import { TimerSpec } from "../src/types"
-import { AntDesign } from "@expo/vector-icons"
 import ColorThemePicker from "../src/components/ColorThemePicker"
 import {
   COLOR_THEMES,

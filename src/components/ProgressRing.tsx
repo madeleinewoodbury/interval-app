@@ -1,6 +1,7 @@
 import React from "react"
 import Svg, { Circle } from "react-native-svg"
 import { View } from "react-native"
+import { COLORS } from "../constants/colors"
 
 type Props = {
   size: number
@@ -15,7 +16,7 @@ export default function ProgressRing({
   stroke,
   progress,
   color,
-  bg = "rgba(255,255,255,0.15)",
+  bg = COLORS.transparentWhite15,
 }: Props) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r

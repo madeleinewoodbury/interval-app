@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { TimerSpec } from "../types"
+import { DEFAULT_COLOR_THEME } from "../constants/colorThemes"
 
 const TIMERS_STORAGE_KEY = "@interval_app_timers"
 
@@ -13,14 +14,14 @@ const DEFAULT_TABATA: TimerSpec = {
       id: "work",
       label: "Work",
       seconds: 10,
-      color: "#EF4444", // Red
+      color: DEFAULT_COLOR_THEME.workColor,
       sound: "beep_1",
     },
     {
       id: "rest",
       label: "Rest",
       seconds: 5,
-      color: "#3B82F6", // Blue
+      color: DEFAULT_COLOR_THEME.restColor,
       sound: "beep_2",
     },
   ],

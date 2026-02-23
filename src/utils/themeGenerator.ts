@@ -1,4 +1,5 @@
 import { TimerSpec } from "../types"
+import { COLORS } from "../constants/colors"
 
 export type TimerTheme = {
   work: {
@@ -92,8 +93,8 @@ export function generateThemeFromTimer(timerSpec: TimerSpec): TimerTheme {
   const workSegment = timerSpec.segments.find((s) => s.id === "work")
   const restSegment = timerSpec.segments.find((s) => s.id === "rest")
 
-  const workColor = workSegment?.color || "#FF6B35"
-  const restColor = restSegment?.color || "#1B4F72"
+  const workColor = workSegment?.color || COLORS.orange600
+  const restColor = restSegment?.color || COLORS.navy900
 
   // Generate UI colors based on work color (primary segment)
   const uiBackground = darkenColor(workColor, 0.85) // Very dark version
@@ -103,31 +104,31 @@ export function generateThemeFromTimer(timerSpec: TimerSpec): TimerTheme {
   return {
     work: {
       background: workColor,
-      text: isLightColor(workColor) ? "#1A202C" : "#FFFFFF",
+      text: isLightColor(workColor) ? COLORS.charcoal900 : COLORS.white,
       textSecondary: isLightColor(workColor)
-        ? "rgba(26, 32, 44, 0.7)"
-        : "rgba(255, 255, 255, 0.8)",
+        ? COLORS.transparentCharcoal70
+        : COLORS.transparentWhite80,
     },
     rest: {
       background: restColor,
-      text: isLightColor(restColor) ? "#1A202C" : "#FFFFFF",
+      text: isLightColor(restColor) ? COLORS.charcoal900 : COLORS.white,
       textSecondary: isLightColor(restColor)
-        ? "rgba(26, 32, 44, 0.7)"
-        : "rgba(255, 255, 255, 0.8)",
+        ? COLORS.transparentCharcoal70
+        : COLORS.transparentWhite80,
     },
     ui: {
       background: uiBackground,
       cardBackground: cardBackground,
       accent: accent,
-      textPrimary: "#FFFFFF",
-      textSecondary: "rgba(255, 255, 255, 0.7)",
+      textPrimary: COLORS.white,
+      textSecondary: COLORS.transparentWhite70,
       buttonPrimary: accent,
       buttonSecondary: lightenColor(uiBackground, 0.2),
-      success: "#22C55E",
+      success: COLORS.green500,
     },
     states: {
       countdown: darkenColor(workColor, 0.6),
-      finished: "#059669",
+      finished: COLORS.emerald600,
       paused: darkenColor(workColor, 0.7),
     },
   }
@@ -136,57 +137,57 @@ export function generateThemeFromTimer(timerSpec: TimerSpec): TimerTheme {
 // Default neutral theme for non-timer screens
 export const neutralTheme: TimerTheme = {
   work: {
-    background: "#374151",
-    text: "#FFFFFF",
-    textSecondary: "rgba(255, 255, 255, 0.8)",
+    background: COLORS.gray700,
+    text: COLORS.white,
+    textSecondary: COLORS.transparentWhite80,
   },
   rest: {
-    background: "#374151",
-    text: "#FFFFFF",
-    textSecondary: "rgba(255, 255, 255, 0.8)",
+    background: COLORS.gray700,
+    text: COLORS.white,
+    textSecondary: COLORS.transparentWhite80,
   },
   ui: {
-    background: "#0F172A",
-    cardBackground: "#1E293B",
-    accent: "#3B82F6",
-    textPrimary: "#FFFFFF",
-    textSecondary: "#94A3B8",
-    buttonPrimary: "#3B82F6",
-    buttonSecondary: "#475569",
-    success: "#22C55E",
+    background: COLORS.slate900,
+    cardBackground: COLORS.slate800,
+    accent: COLORS.blue500,
+    textPrimary: COLORS.white,
+    textSecondary: COLORS.slate400,
+    buttonPrimary: COLORS.blue500,
+    buttonSecondary: COLORS.slate600,
+    success: COLORS.green500,
   },
   states: {
-    countdown: "#374151",
-    finished: "#059669",
-    paused: "#6B7280",
+    countdown: COLORS.gray700,
+    finished: COLORS.emerald600,
+    paused: COLORS.gray500,
   },
 }
 
 export const neutralLightTheme: TimerTheme = {
   work: {
-    background: "#FFFFFF",
-    text: "#0F172A",
-    textSecondary: "#475569",
+    background: COLORS.white,
+    text: COLORS.slate900,
+    textSecondary: COLORS.slate600,
   },
   rest: {
-    background: "#FFFFFF",
-    text: "#0F172A",
-    textSecondary: "#475569",
+    background: COLORS.white,
+    text: COLORS.slate900,
+    textSecondary: COLORS.slate600,
   },
   ui: {
-    background: "#F8FAFC",
-    cardBackground: "#FFFFFF",
-    accent: "#2563EB",
-    textPrimary: "#0F172A",
-    textSecondary: "#475569",
-    buttonPrimary: "#2563EB",
-    buttonSecondary: "#E2E8F0",
-    success: "#16A34A",
+    background: COLORS.slate50,
+    cardBackground: COLORS.white,
+    accent: COLORS.blue600,
+    textPrimary: COLORS.slate900,
+    textSecondary: COLORS.slate600,
+    buttonPrimary: COLORS.blue600,
+    buttonSecondary: COLORS.slate200,
+    success: COLORS.green600,
   },
   states: {
-    countdown: "#E2E8F0",
-    finished: "#16A34A",
-    paused: "#94A3B8",
+    countdown: COLORS.slate200,
+    finished: COLORS.green600,
+    paused: COLORS.slate400,
   },
 }
 

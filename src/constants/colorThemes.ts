@@ -1,3 +1,5 @@
+import { COLORS } from "./colors"
+
 export type ColorThemeOption = {
   id: string
   name: string
@@ -15,8 +17,8 @@ export const COLOR_THEMES: ColorThemeOption[] = [
     id: "classic",
     name: "Classic",
     description: "Traditional red/blue combination",
-    workColor: "#EF4444", // Red
-    restColor: "#3B82F6", // Blue
+    workColor: COLORS.red500, // Red
+    restColor: COLORS.blue500, // Blue
     preview: {
       workLabel: "Work",
       restLabel: "Rest",
@@ -26,8 +28,8 @@ export const COLOR_THEMES: ColorThemeOption[] = [
     id: "nature",
     name: "Nature",
     description: "Fresh green and sky blue",
-    workColor: "#22C55E", // Green
-    restColor: "#0EA5E9", // Sky blue
+    workColor: COLORS.green500, // Green
+    restColor: COLORS.sky500, // Sky blue
     preview: {
       workLabel: "Work",
       restLabel: "Rest",
@@ -37,8 +39,8 @@ export const COLOR_THEMES: ColorThemeOption[] = [
     id: "sunset",
     name: "Sunset",
     description: "Warm orange and purple",
-    workColor: "#F97316", // Orange
-    restColor: "#8B5CF6", // Purple
+    workColor: COLORS.orange500, // Orange
+    restColor: COLORS.purple500, // Purple
     preview: {
       workLabel: "Work",
       restLabel: "Rest",
@@ -48,8 +50,8 @@ export const COLOR_THEMES: ColorThemeOption[] = [
     id: "energy",
     name: "Energy",
     description: "Bright yellow and teal",
-    workColor: "#EAB308", // Yellow
-    restColor: "#14B8A6", // Teal
+    workColor: COLORS.yellow500, // Yellow
+    restColor: COLORS.teal500, // Teal
     preview: {
       workLabel: "Work",
       restLabel: "Rest",
@@ -59,8 +61,8 @@ export const COLOR_THEMES: ColorThemeOption[] = [
     id: "ocean",
     name: "Ocean",
     description: "Deep blue and cyan waves",
-    workColor: "#1E40AF", // Deep blue
-    restColor: "#06B6D4", // Cyan
+    workColor: COLORS.blue900, // Deep blue
+    restColor: COLORS.cyan500, // Cyan
     preview: {
       workLabel: "Work",
       restLabel: "Rest",
@@ -70,8 +72,8 @@ export const COLOR_THEMES: ColorThemeOption[] = [
     id: "fire",
     name: "Fire",
     description: "Intense red and pink flames",
-    workColor: "#DC2626", // Crimson
-    restColor: "#EC4899", // Pink
+    workColor: COLORS.red600, // Crimson
+    restColor: COLORS.pink500, // Pink
     preview: {
       workLabel: "Work",
       restLabel: "Rest",
@@ -81,8 +83,8 @@ export const COLOR_THEMES: ColorThemeOption[] = [
     id: "earth",
     name: "Earth",
     description: "Brown earth and forest green",
-    workColor: "#92400E", // Brown
-    restColor: "#166534", // Forest green
+    workColor: COLORS.brown700, // Brown
+    restColor: COLORS.forest800, // Forest green
     preview: {
       workLabel: "Work",
       restLabel: "Rest",
@@ -92,8 +94,8 @@ export const COLOR_THEMES: ColorThemeOption[] = [
     id: "midnight",
     name: "Midnight",
     description: "Dark purple and indigo",
-    workColor: "#7C2D92", // Dark purple
-    restColor: "#4338CA", // Indigo
+    workColor: COLORS.purple700, // Dark purple
+    restColor: COLORS.indigo600, // Indigo
     preview: {
       workLabel: "Work",
       restLabel: "Rest",
