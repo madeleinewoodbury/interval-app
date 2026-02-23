@@ -6,10 +6,31 @@ export class TimerEngine {
   private spec: TimerSpec | null = null
   private listeners = new Set<Listener>()
   private ticker?: ReturnType<typeof setInterval>
+  private lastTickAt: number | null = null
+  private backgrounded = false
+  private backgroundElapsedMs = 0
   private state: import("../types").EngineState = { kind: "idle" }
   private segIdx = 0
   private round = 1
   private remaining = 0
+
+  rebaseTickerClock() {
+    this.lastTickAt = Date.now()
+  }
+
+  beginBackgroundTracking() {
+    this.backgrounded = true
+    this.backgroundElapsedMs = 0
+    this.rebaseTickerClock()
+  }
+
+  endBackgroundTracking(): number {
+    const elapsedMs = this.backgroundElapsedMs
+    this.backgrounded = false
+    this.backgroundElapsedMs = 0
+    this.rebaseTickerClock()
+    return elapsedMs
+  }
 
   /**
    * Fast-forward the engine by a given elapsed milliseconds that occurred while app was backgrounded.
@@ -140,17 +161,24 @@ export class TimerEngine {
 
   private beginTick() {
     if (this.ticker) clearInterval(this.ticker)
-    let last = Date.now()
+    this.lastTickAt = Date.now()
     this.ticker = setInterval(() => {
+      if (this.lastTickAt == null) {
+        this.lastTickAt = Date.now()
+        return
+      }
       const now = Date.now()
-      const delta = now - last
-      last = now
+      const delta = now - this.lastTickAt
+      this.lastTickAt = now
       this.onTick(delta)
     }, 200) // 5Hz for drift resistance; not frame-heavy
   }
 
   private onTick(deltaMs: number) {
     if (!this.spec) return
+    if (this.backgrounded) {
+      this.backgroundElapsedMs += deltaMs
+    }
     if (this.state.kind === "countdown") {
       this.remaining = Math.max(0, this.remaining - deltaMs / 1000)
       const remainInt = Math.ceil(this.remaining)
@@ -223,12 +251,18 @@ export class TimerEngine {
 
   private finish() {
     if (this.ticker) clearInterval(this.ticker)
+    this.ticker = undefined
+    this.lastTickAt = null
     this.state = { kind: "finished" }
     this.emit()
   }
 
   private reset() {
     if (this.ticker) clearInterval(this.ticker)
+    this.ticker = undefined
+    this.lastTickAt = null
+    this.backgrounded = false
+    this.backgroundElapsedMs = 0
     this.state = { kind: "idle" }
     this.segIdx = 0
     this.round = 1

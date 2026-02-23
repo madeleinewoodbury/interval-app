@@ -264,15 +264,27 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         appState.current = nextAppState
 
         if (goingToBackground) {
-          backgroundAt.current = Date.now()
+          const isTimingActive =
+            latestState.current.kind === "running" ||
+            latestState.current.kind === "countdown"
+          if (isTimingActive) {
+            engine.beginBackgroundTracking()
+          }
+          backgroundAt.current = isTimingActive ? Date.now() : null
           await NotificationService.cancelAllNotifications()
           await scheduleAllRemainingSegmentNotifications()
         } else if (comingToForeground) {
+          const elapsedViaTicks = engine.endBackgroundTracking()
           await NotificationService.cancelAllNotifications()
-          if (backgroundAt.current && currentTimer.current) {
-            const elapsed = Date.now() - backgroundAt.current
+          const isTimingActive =
+            latestState.current.kind === "running" ||
+            latestState.current.kind === "countdown"
+          if (backgroundAt.current && currentTimer.current && isTimingActive) {
+            const totalElapsed = Date.now() - backgroundAt.current
+            const elapsed = Math.max(0, totalElapsed - elapsedViaTicks)
             backgroundAt.current = null
             engine.fastForward(elapsed)
+            engine.rebaseTickerClock()
           }
         }
       },
