@@ -98,6 +98,27 @@ export default function RunScreen() {
     return currentTheme.ui.accent
   })()
 
+  const activeSegment =
+    state.kind === "running" || state.kind === "paused"
+      ? engine.currentSpec?.segments[state.segmentIndex]
+      : undefined
+
+  const playButtonBackgroundColor = (() => {
+    if (!activeSegment) return currentTheme.ui.buttonPrimary
+    return activeSegment.id === "work"
+      ? currentTheme.rest.background
+      : currentTheme.work.background
+  })()
+
+  const playButtonIconColor = (() => {
+    if (!activeSegment) return currentTheme.ui.textPrimary
+    return activeSegment.id === "work"
+      ? currentTheme.rest.text
+      : currentTheme.work.text
+  })()
+
+  const replayButtonBackgroundColor = currentTheme.ui.cardBackground
+
   // progress is derived later from refs; removed unused temp calculation
 
   // Track initial segment seconds to compute progress
@@ -259,7 +280,7 @@ export default function RunScreen() {
           style={{
             paddingVertical: 14,
             paddingHorizontal: 18,
-            backgroundColor: currentTheme.ui.buttonSecondary,
+            backgroundColor: replayButtonBackgroundColor,
             borderRadius: 12,
           }}
         >
@@ -292,14 +313,14 @@ export default function RunScreen() {
             style={{
               paddingVertical: 14,
               paddingHorizontal: 18,
-              backgroundColor: currentTheme.ui.success,
+              backgroundColor: playButtonBackgroundColor,
               borderRadius: 14,
             }}
           >
             <AntDesign
               name="play-circle"
               size={24}
-              color={currentTheme.ui.textPrimary}
+              color={playButtonIconColor}
             />
           </Pressable>
         ) : (
@@ -308,14 +329,14 @@ export default function RunScreen() {
             style={{
               paddingVertical: 14,
               paddingHorizontal: 18,
-              backgroundColor: currentTheme.ui.success,
+              backgroundColor: playButtonBackgroundColor,
               borderRadius: 14,
             }}
           >
             <AntDesign
               name="play-circle"
               size={24}
-              color={currentTheme.ui.textPrimary}
+              color={playButtonIconColor}
             />
           </Pressable>
         )}
