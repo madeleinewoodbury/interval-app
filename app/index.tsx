@@ -13,19 +13,22 @@ import { neutralTheme, chooseNeutralTheme } from "../src/utils/themeGenerator"
 import { useSettings } from "../src/context/SettingsProvider"
 import { TimerSpec } from "../src/types"
 import { AntDesign } from "@expo/vector-icons"
+import { COLORS } from "../src/constants/colors"
 
 // Timer card component
 function TimerCard({
   timer,
+  theme,
+  isLight,
   onPress,
   onLongPress,
 }: {
   timer: TimerSpec
+  theme: typeof neutralTheme
+  isLight: boolean
   onPress: () => void
   onLongPress: () => void
 }) {
-  const theme = neutralTheme
-
   return (
     <Pressable
       onPress={onPress}
@@ -39,6 +42,13 @@ function TimerCard({
         alignItems: "center",
         borderLeftWidth: 4,
         borderLeftColor: timer.segments[0]?.color || theme.ui.accent,
+        borderWidth: isLight ? 1 : 0,
+        borderColor: isLight ? COLORS.slate200 : "transparent",
+        shadowColor: isLight ? COLORS.slate900 : "transparent",
+        shadowOffset: { width: 0, height: isLight ? 2 : 0 },
+        shadowOpacity: isLight ? 0.08 : 0,
+        shadowRadius: isLight ? 8 : 0,
+        elevation: isLight ? 2 : 0,
       }}
     >
       <View style={{ flex: 1 }}>
@@ -84,6 +94,7 @@ export default function TimersScreen() {
     settings.themePreference === "system"
       ? systemScheme
       : settings.themePreference
+  const isLight = pref === "light"
   const theme = chooseNeutralTheme(pref === "light" ? "light" : "dark")
 
   const handleTimerPress = (timer: TimerSpec) => {
@@ -203,7 +214,7 @@ export default function TimersScreen() {
             alignItems: "center",
           }}
         >
-          <AntDesign name="plus" size={20} color={theme.ui.textPrimary} />
+          <AntDesign name="plus" size={20} color={COLORS.white} />
         </Pressable>
       </View>
 
@@ -253,6 +264,8 @@ export default function TimersScreen() {
             <TimerCard
               key={timer.id}
               timer={timer}
+              theme={theme}
+              isLight={isLight}
               onPress={() => handleTimerPress(timer)}
               onLongPress={() => handleTimerLongPress(timer)}
             />

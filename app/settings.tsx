@@ -9,6 +9,7 @@ import {
 } from "react-native"
 import { useSettings } from "../src/context/SettingsProvider"
 import { chooseNeutralTheme } from "../src/utils/themeGenerator"
+import { COLORS } from "../src/constants/colors"
 
 const THEME_OPTIONS = ["system", "light", "dark"] as const
 
@@ -49,7 +50,12 @@ export default function SettingsScreen() {
         <Switch
           value={value}
           onValueChange={onChange}
-          thumbColor={value ? theme.ui.accent : undefined}
+          trackColor={{
+            false: isLight ? COLORS.slate300 : COLORS.slate600,
+            true: COLORS.indigo600,
+          }}
+          ios_backgroundColor={isLight ? COLORS.slate300 : COLORS.slate600}
+          thumbColor={isLight ? COLORS.white : COLORS.slate50}
         />
       </View>
     </View>
@@ -73,7 +79,10 @@ export default function SettingsScreen() {
                     color: theme.ui.accent,
                     fontWeight: "700",
                   }
-                : styles.themeOptionUnselected,
+                : [
+                    styles.themeOptionUnselected,
+                    { color: theme.ui.textSecondary },
+                  ],
             ]}
           >
             {mode === "system" ? "System" : mode === "light" ? "Light" : "Dark"}{" "}
