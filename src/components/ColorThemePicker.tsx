@@ -1,19 +1,21 @@
 import React from "react"
 import { View, Text, Pressable, ScrollView } from "react-native"
 import { COLOR_THEMES, ColorThemeOption } from "../constants/colorThemes"
-import { neutralTheme } from "../utils/themeGenerator"
+import { TimerTheme, neutralTheme } from "../utils/themeGenerator"
 
 type Props = {
   selectedThemeId?: string
   onThemeSelect: (theme: ColorThemeOption) => void
+  theme?: TimerTheme
+  isLight?: boolean
 }
 
 export default function ColorThemePicker({
   selectedThemeId,
   onThemeSelect,
+  theme = neutralTheme,
+  isLight = false,
 }: Props) {
-  const theme = neutralTheme
-
   return (
     <View style={{ marginVertical: 16 }}>
       <Text
@@ -49,7 +51,14 @@ export default function ColorThemePicker({
                 borderWidth: isSelected ? 2 : 1,
                 borderColor: isSelected
                   ? theme.ui.accent
-                  : theme.ui.cardBackground,
+                  : isLight
+                    ? theme.ui.buttonSecondary
+                    : theme.ui.cardBackground,
+                shadowColor: isLight ? theme.ui.textPrimary : "transparent",
+                shadowOffset: { width: 0, height: isLight ? 1 : 0 },
+                shadowOpacity: isLight ? 0.06 : 0,
+                shadowRadius: isLight ? 6 : 0,
+                elevation: isLight ? 1 : 0,
               }}
             >
               {/* Color preview */}

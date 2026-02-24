@@ -9,12 +9,14 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  useColorScheme,
 } from "react-native"
 import { useRouter, useLocalSearchParams } from "expo-router"
 import { useTimer } from "../src/context/TimerProvider"
-import { neutralTheme } from "../src/utils/themeGenerator"
+import { chooseNeutralTheme } from "../src/utils/themeGenerator"
 import { TimerSpec } from "../src/types"
 import ColorThemePicker from "../src/components/ColorThemePicker"
+import { useSettings } from "../src/context/SettingsProvider"
 import {
   COLOR_THEMES,
   ColorThemeOption,
@@ -26,7 +28,24 @@ export default function CreateTimerScreen() {
   const router = useRouter()
   const { id: editingTimerId } = useLocalSearchParams<{ id?: string }>()
   const { saveTimer, updateTimer, getTimer } = useTimer()
-  const theme = neutralTheme
+  const { settings } = useSettings()
+  const systemScheme = useColorScheme() || "light"
+  const pref =
+    settings.themePreference === "system"
+      ? systemScheme
+      : settings.themePreference
+  const isLight = pref === "light"
+  const theme = chooseNeutralTheme(pref === "light" ? "light" : "dark")
+  const inputSurfaceStyle = {
+    backgroundColor: theme.ui.cardBackground,
+    borderWidth: isLight ? 1 : 0,
+    borderColor: isLight ? theme.ui.buttonSecondary : "transparent",
+    shadowColor: isLight ? theme.ui.textPrimary : "transparent",
+    shadowOffset: { width: 0, height: isLight ? 1 : 0 },
+    shadowOpacity: isLight ? 0.06 : 0,
+    shadowRadius: isLight ? 6 : 0,
+    elevation: isLight ? 1 : 0,
+  } as const
 
   // Form state
   const [name, setName] = useState("")
@@ -211,7 +230,7 @@ export default function CreateTimerScreen() {
               placeholder="e.g. HIIT Workout, Study Session"
               placeholderTextColor={theme.ui.textSecondary}
               style={{
-                backgroundColor: theme.ui.cardBackground,
+                ...inputSurfaceStyle,
                 color: theme.ui.textPrimary,
                 padding: 12,
                 borderRadius: 8,
@@ -248,7 +267,7 @@ export default function CreateTimerScreen() {
                   placeholder="0"
                   placeholderTextColor={theme.ui.textSecondary}
                   style={{
-                    backgroundColor: theme.ui.cardBackground,
+                    ...inputSurfaceStyle,
                     color: theme.ui.textPrimary,
                     padding: 12,
                     borderRadius: 8,
@@ -273,7 +292,7 @@ export default function CreateTimerScreen() {
                   placeholder="20"
                   placeholderTextColor={theme.ui.textSecondary}
                   style={{
-                    backgroundColor: theme.ui.cardBackground,
+                    ...inputSurfaceStyle,
                     color: theme.ui.textPrimary,
                     padding: 12,
                     borderRadius: 8,
@@ -313,7 +332,7 @@ export default function CreateTimerScreen() {
                   placeholder="0"
                   placeholderTextColor={theme.ui.textSecondary}
                   style={{
-                    backgroundColor: theme.ui.cardBackground,
+                    ...inputSurfaceStyle,
                     color: theme.ui.textPrimary,
                     padding: 12,
                     borderRadius: 8,
@@ -338,7 +357,7 @@ export default function CreateTimerScreen() {
                   placeholder="10"
                   placeholderTextColor={theme.ui.textSecondary}
                   style={{
-                    backgroundColor: theme.ui.cardBackground,
+                    ...inputSurfaceStyle,
                     color: theme.ui.textPrimary,
                     padding: 12,
                     borderRadius: 8,
@@ -369,7 +388,7 @@ export default function CreateTimerScreen() {
               placeholder="8"
               placeholderTextColor={theme.ui.textSecondary}
               style={{
-                backgroundColor: theme.ui.cardBackground,
+                ...inputSurfaceStyle,
                 color: theme.ui.textPrimary,
                 padding: 12,
                 borderRadius: 8,
@@ -384,6 +403,8 @@ export default function CreateTimerScreen() {
           <ColorThemePicker
             selectedThemeId={selectedTheme.id}
             onThemeSelect={setSelectedTheme}
+            theme={theme}
+            isLight={isLight}
           />
         </ScrollView>
       </KeyboardAvoidingView>
