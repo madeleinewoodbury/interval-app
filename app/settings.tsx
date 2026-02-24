@@ -13,6 +13,92 @@ import { COLORS } from "../src/constants/colors"
 
 const THEME_OPTIONS = ["system", "light", "dark"] as const
 
+type RowProps = {
+  label: string
+  value: boolean
+  onChange: (v: boolean) => void
+  description?: string
+  borderColor: string
+  isLight: boolean
+  textPrimary: string
+  textSecondary: string
+}
+
+const SettingsRow: React.FC<RowProps> = ({
+  label,
+  value,
+  onChange,
+  description,
+  borderColor,
+  isLight,
+  textPrimary,
+  textSecondary,
+}) => (
+  <View style={[styles.row, { borderBottomColor: borderColor }]}>
+    <View style={styles.rowInner}>
+      <View style={styles.rowContent}>
+        <Text style={[styles.rowLabel, { color: textPrimary }]}>{label}</Text>
+        {description ? (
+          <Text style={[styles.rowDescription, { color: textSecondary }]}>
+            {description}
+          </Text>
+        ) : null}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        trackColor={{
+          false: isLight ? COLORS.slate300 : COLORS.slate600,
+          true: COLORS.indigo600,
+        }}
+        ios_backgroundColor={isLight ? COLORS.slate300 : COLORS.slate600}
+        thumbColor={isLight ? COLORS.white : COLORS.slate50}
+      />
+    </View>
+  </View>
+)
+
+type ThemeRowProps = {
+  selectedTheme: "system" | "light" | "dark"
+  onSelectTheme: (mode: "system" | "light" | "dark") => void
+  textPrimary: string
+  textSecondary: string
+  accent: string
+}
+
+const ThemePreferenceRow: React.FC<ThemeRowProps> = ({
+  selectedTheme,
+  onSelectTheme,
+  textPrimary,
+  textSecondary,
+  accent,
+}) => (
+  <View style={styles.themeRow}>
+    <Text style={[styles.themeTitle, { color: textPrimary }]}>Theme</Text>
+    {THEME_OPTIONS.map((mode) => {
+      const selected = selectedTheme === mode
+      return (
+        <Text
+          key={mode}
+          onPress={() => onSelectTheme(mode)}
+          style={[
+            styles.themeOption,
+            selected
+              ? {
+                  color: accent,
+                  fontWeight: "700",
+                }
+              : [styles.themeOptionUnselected, { color: textSecondary }],
+          ]}
+        >
+          {mode === "system" ? "System" : mode === "light" ? "Light" : "Dark"}{" "}
+          {selected ? "✓" : ""}
+        </Text>
+      )
+    })}
+  </View>
+)
+
 export default function SettingsScreen() {
   const { settings, updateSettings, resetSettings } = useSettings()
   const systemScheme = useColorScheme()
@@ -27,72 +113,6 @@ export default function SettingsScreen() {
     ? theme.ui.buttonSecondary
     : theme.ui.cardBackground
 
-  const Row: React.FC<{
-    label: string
-    value: boolean
-    onChange: (v: boolean) => void
-    description?: string
-  }> = ({ label, value, onChange, description }) => (
-    <View style={[styles.row, { borderBottomColor: borderColor }]}>
-      <View style={styles.rowInner}>
-        <View style={styles.rowContent}>
-          <Text style={[styles.rowLabel, { color: theme.ui.textPrimary }]}>
-            {label}
-          </Text>
-          {description ? (
-            <Text
-              style={[styles.rowDescription, { color: theme.ui.textSecondary }]}
-            >
-              {description}
-            </Text>
-          ) : null}
-        </View>
-        <Switch
-          value={value}
-          onValueChange={onChange}
-          trackColor={{
-            false: isLight ? COLORS.slate300 : COLORS.slate600,
-            true: COLORS.indigo600,
-          }}
-          ios_backgroundColor={isLight ? COLORS.slate300 : COLORS.slate600}
-          thumbColor={isLight ? COLORS.white : COLORS.slate50}
-        />
-      </View>
-    </View>
-  )
-
-  const ThemeRow: React.FC = () => (
-    <View style={styles.themeRow}>
-      <Text style={[styles.themeTitle, { color: theme.ui.textPrimary }]}>
-        Theme
-      </Text>
-      {THEME_OPTIONS.map((mode) => {
-        const selected = settings.themePreference === mode
-        return (
-          <Text
-            key={mode}
-            onPress={() => updateSettings({ themePreference: mode })}
-            style={[
-              styles.themeOption,
-              selected
-                ? {
-                    color: theme.ui.accent,
-                    fontWeight: "700",
-                  }
-                : [
-                    styles.themeOptionUnselected,
-                    { color: theme.ui.textSecondary },
-                  ],
-            ]}
-          >
-            {mode === "system" ? "System" : mode === "light" ? "Light" : "Dark"}{" "}
-            {selected ? "✓" : ""}
-          </Text>
-        )
-      })}
-    </View>
-  )
-
   return (
     <ScrollView
       style={[styles.screen, { backgroundColor: theme.ui.background }]}
@@ -105,25 +125,43 @@ export default function SettingsScreen() {
         <Text style={[styles.subtitle, { color: theme.ui.textSecondary }]}>
           Control audio, haptics, countdown and theme.
         </Text>
-        <Row
+        <SettingsRow
           label="Sounds"
           value={settings.soundsEnabled}
           description="Play beeps for segment transitions and completion"
           onChange={(v) => updateSettings({ soundsEnabled: v })}
+          borderColor={borderColor}
+          isLight={isLight}
+          textPrimary={theme.ui.textPrimary}
+          textSecondary={theme.ui.textSecondary}
         />
-        <Row
+        <SettingsRow
           label="Haptics"
           value={settings.hapticsEnabled}
           description="Vibration feedback on transitions"
           onChange={(v) => updateSettings({ hapticsEnabled: v })}
+          borderColor={borderColor}
+          isLight={isLight}
+          textPrimary={theme.ui.textPrimary}
+          textSecondary={theme.ui.textSecondary}
         />
-        <Row
+        <SettingsRow
           label="Countdown beeps"
           value={settings.countdownBeepsEnabled}
           description="Play 3-2-1 beeps before start and at end of segments"
           onChange={(v) => updateSettings({ countdownBeepsEnabled: v })}
+          borderColor={borderColor}
+          isLight={isLight}
+          textPrimary={theme.ui.textPrimary}
+          textSecondary={theme.ui.textSecondary}
         />
-        <ThemeRow />
+        <ThemePreferenceRow
+          selectedTheme={settings.themePreference}
+          onSelectTheme={(mode) => updateSettings({ themePreference: mode })}
+          textPrimary={theme.ui.textPrimary}
+          textSecondary={theme.ui.textSecondary}
+          accent={theme.ui.accent}
+        />
       </View>
       <Text
         onPress={() => resetSettings()}
