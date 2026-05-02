@@ -4,11 +4,16 @@ import { SettingsProvider, useSettings } from "../src/context/SettingsProvider"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { AntDesign } from "@expo/vector-icons"
 import { useColorScheme } from "react-native"
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context"
 import { chooseNeutralTheme } from "../src/utils/themeGenerator"
 
 function AppTabs() {
   const { settings } = useSettings()
   const systemScheme = useColorScheme() || "light"
+  const insets = useSafeAreaInsets()
   const effectiveTheme =
     settings.themePreference === "system"
       ? systemScheme
@@ -33,7 +38,8 @@ function AppTabs() {
             backgroundColor: theme.ui.cardBackground,
             borderTopColor: theme.ui.buttonSecondary,
             paddingTop: 8,
-            height: 90,
+            paddingBottom: insets.bottom,
+            height: 56 + insets.bottom,
           },
           tabBarActiveTintColor: theme.ui.accent,
           tabBarInactiveTintColor: theme.ui.textSecondary,
@@ -47,6 +53,7 @@ function AppTabs() {
           name="index"
           options={{
             title: "Timers",
+            tabBarAccessibilityLabel: "Timers tab",
             tabBarIcon: ({ color, size }) => (
               <AntDesign name="clock-circle" size={size} color={color} />
             ),
@@ -56,6 +63,7 @@ function AppTabs() {
           name="run"
           options={{
             title: "Run",
+            tabBarAccessibilityLabel: "Run tab",
             tabBarIcon: ({ color, size }) => (
               <AntDesign name="play-circle" size={size} color={color} />
             ),
@@ -72,6 +80,7 @@ function AppTabs() {
           name="settings"
           options={{
             title: "Settings",
+            tabBarAccessibilityLabel: "Settings tab",
             tabBarIcon: ({ color, size }) => (
               <AntDesign name="setting" size={size} color={color} />
             ),
@@ -85,9 +94,11 @@ function AppTabs() {
 export default function Layout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SettingsProvider>
-        <AppTabs />
-      </SettingsProvider>
+      <SafeAreaProvider>
+        <SettingsProvider>
+          <AppTabs />
+        </SettingsProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   )
 }

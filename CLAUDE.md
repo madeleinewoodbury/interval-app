@@ -32,7 +32,7 @@ TimerStorage (AsyncStorage) ──► TimerProvider (Context)
 
 **`src/engine/timerEngine.ts`** — Pure timer logic class. Drives state through a subscriber pattern (`subscribe(fn)`). Ticks at 5Hz (200ms intervals) for drift resistance. States: `idle → countdown → running ↔ paused → finished`. Handles background fast-forward via `fastForward(elapsedMs)`.
 
-**`src/context/TimerProvider.tsx`** — Single context wrapping all timer functionality. Combines engine control, CRUD operations via `TimerStorage`, sound playback (`expo-av`), haptics, background/foreground lifecycle, and notification scheduling. Exposes `useTimer()` hook.
+**`src/context/TimerProvider.tsx`** — Single context wrapping all timer functionality. Combines engine control, CRUD operations via `TimerStorage`, sound playback (`expo-audio` via `createAudioPlayer` + `setAudioModeAsync`), haptics, background/foreground lifecycle, and notification scheduling. Exposes `useTimer()` hook.
 
 **`src/context/SettingsProvider.tsx`** — Persists user preferences (`soundsEnabled`, `hapticsEnabled`, `countdownBeepsEnabled`, `themePreference`) to AsyncStorage. Exposes `useSettings()`. Must wrap `TimerProvider` (see `app/_layout.tsx`).
 

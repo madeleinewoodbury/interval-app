@@ -1,7 +1,9 @@
-import React, { useEffect } from "react"
-import { SafeAreaView, Text, View, Pressable } from "react-native"
+import React, { useEffect, useMemo } from "react"
+import { Text, View, Pressable } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { useRouter } from "expo-router"
 import { useTimer } from "../src/context/TimerProvider"
+import { useSettings } from "../src/context/SettingsProvider"
 import {
   generateThemeFromTimer,
   neutralTheme,
@@ -23,6 +25,7 @@ export default function RunScreen() {
     loadingTimers,
   } = useTimer()
   const router = useRouter()
+  const { settings } = useSettings()
   const attemptedAutoStart = React.useRef(false)
 
   // Auto-start last or first timer when entering Run tab if idle
@@ -41,92 +44,100 @@ export default function RunScreen() {
   }, [state.kind, loadingTimers, timers.length, engine, startLastOrFirst])
 
   // Generate theme from current timer, fallback to neutral if no timer loaded
-  const currentTheme = engine.currentSpec
-    ? generateThemeFromTimer(engine.currentSpec)
-    : neutralTheme
-
-  const bgColor = (() => {
-    if (state.kind === "running") {
-      // Get current segment to determine work/rest colors
-      const currentSegment = engine.currentSpec?.segments[state.segmentIndex]
-      if (currentSegment) {
-        return currentSegment.id === "work"
-          ? currentTheme.work.background
-          : currentTheme.rest.background
-      }
-      return currentTheme.ui.background
-    }
-    if (state.kind === "countdown") return currentTheme.states.countdown
-    if (state.kind === "finished") return currentTheme.states.finished
-    if (state.kind === "paused") return currentTheme.states.paused
-    return currentTheme.ui.background
-  })()
-
-  const textColor = (() => {
-    if (state.kind === "running") {
-      const currentSegment = engine.currentSpec?.segments[state.segmentIndex]
-      if (currentSegment) {
-        return currentSegment.id === "work"
-          ? currentTheme.work.text
-          : currentTheme.rest.text
-      }
-    }
-    return currentTheme.ui.textPrimary
-  })()
-
-  const textSecondaryColor = (() => {
-    if (state.kind === "running") {
-      const currentSegment = engine.currentSpec?.segments[state.segmentIndex]
-      if (currentSegment) {
-        return currentSegment.id === "work"
-          ? currentTheme.work.textSecondary
-          : currentTheme.rest.textSecondary
-      }
-    }
-    return currentTheme.ui.textSecondary
-  })()
-
-  const ringColor = (() => {
-    if (state.kind === "running") {
-      const currentSegment = engine.currentSpec?.segments[state.segmentIndex]
-      if (currentSegment) {
-        return currentSegment.id === "work"
-          ? currentTheme.work.text
-          : currentTheme.rest.text
-      }
-    }
-    return currentTheme.ui.accent
-  })()
+  const currentTheme = useMemo(
+    () =>
+      engine.currentSpec
+        ? generateThemeFromTimer(engine.currentSpec)
+        : neutralTheme,
+    [engine.currentSpec],
+  )
 
   const activeSegment =
     state.kind === "running" || state.kind === "paused"
       ? engine.currentSpec?.segments[state.segmentIndex]
       : undefined
+  const activeSegmentKey = activeSegment?.id
 
-  const playButtonBackgroundColor = (() => {
-    if (!activeSegment) return currentTheme.ui.buttonPrimary
-    return activeSegment.id === "work"
-      ? currentTheme.rest.background
-      : currentTheme.work.background
-  })()
+  // Hoist for stable useMemo dep checking
+  const runningSegmentIndex =
+    state.kind === "running" ? state.segmentIndex : null
 
-  const playButtonIconColor = (() => {
-    if (!activeSegment) return currentTheme.ui.textPrimary
-    return activeSegment.id === "work"
-      ? currentTheme.rest.text
-      : currentTheme.work.text
-  })()
+  const colors = useMemo(() => {
+    const runningSegment =
+      state.kind === "running"
+        ? engine.currentSpec?.segments[state.segmentIndex]
+        : undefined
 
-  const replayButtonBackgroundColor = currentTheme.ui.cardBackground
+    const bg = (() => {
+      if (runningSegment) {
+        return runningSegment.id === "work"
+          ? currentTheme.work.background
+          : currentTheme.rest.background
+      }
+      if (state.kind === "countdown") return currentTheme.states.countdown
+      if (state.kind === "finished") return currentTheme.states.finished
+      if (state.kind === "paused") return currentTheme.states.paused
+      return currentTheme.ui.background
+    })()
 
-  // progress is derived later from refs; removed unused temp calculation
+    const text = runningSegment
+      ? runningSegment.id === "work"
+        ? currentTheme.work.text
+        : currentTheme.rest.text
+      : currentTheme.ui.textPrimary
 
-  // Track initial segment seconds to compute progress
+    const textSecondary = runningSegment
+      ? runningSegment.id === "work"
+        ? currentTheme.work.textSecondary
+        : currentTheme.rest.textSecondary
+      : currentTheme.ui.textSecondary
+
+    const ring = runningSegment
+      ? runningSegment.id === "work"
+        ? currentTheme.work.text
+        : currentTheme.rest.text
+      : currentTheme.ui.accent
+
+    const playBg = !activeSegmentKey
+      ? currentTheme.ui.buttonPrimary
+      : activeSegmentKey === "work"
+        ? currentTheme.rest.background
+        : currentTheme.work.background
+
+    const playIcon = !activeSegmentKey
+      ? currentTheme.ui.textPrimary
+      : activeSegmentKey === "work"
+        ? currentTheme.rest.text
+        : currentTheme.work.text
+
+    return {
+      bg,
+      text,
+      textSecondary,
+      ring,
+      playBg,
+      playIcon,
+      replayBg: currentTheme.ui.cardBackground,
+    }
+    // state.segmentIndex is captured via runningSegmentIndex above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    state.kind,
+    runningSegmentIndex,
+    activeSegmentKey,
+    currentTheme,
+    engine.currentSpec,
+  ])
+
+  // Track initial segment / countdown seconds to compute progress
   const initSeg = React.useRef<number>(0)
   const currentSegmentIndex = React.useRef<number>(-1)
+  const initCountdown = React.useRef<number>(0)
+  const wasInCountdown = React.useRef<boolean>(false)
 
   React.useEffect(() => {
     if (state.kind === "running") {
+      wasInCountdown.current = false
       // Reset progress when segment changes
       if (currentSegmentIndex.current !== state.segmentIndex) {
         currentSegmentIndex.current = state.segmentIndex
@@ -138,25 +149,39 @@ export default function RunScreen() {
       if (initSeg.current === 0) {
         initSeg.current = state.remaining || 1
       }
+    } else if (state.kind === "countdown") {
+      if (!wasInCountdown.current) {
+        wasInCountdown.current = true
+        const specCountdown = engine.currentSpec?.options?.countdown ?? 0
+        initCountdown.current =
+          specCountdown > 0 ? specCountdown : Math.max(1, state.remaining)
+      }
+    } else {
+      wasInCountdown.current = false
+      currentSegmentIndex.current = -1
     }
   }, [state, engine.currentSpec])
 
   const progress =
     state.kind === "running" && initSeg.current
       ? 1 - state.remaining / initSeg.current
-      : state.kind === "countdown"
-        ? 1 - state.remaining / Math.max(1, state.remaining)
+      : state.kind === "countdown" && initCountdown.current
+        ? 1 - state.remaining / initCountdown.current
         : 0
 
-  // Single vibration when countdown starts
+  // Single vibration when countdown starts (respect user/timer settings)
   React.useEffect(() => {
-    if (state.kind === "countdown") {
-      // Only vibrate once when countdown begins, not on every tick
-      const timer = setTimeout(() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-      }, 0)
-      return () => clearTimeout(timer)
-    }
+    if (state.kind !== "countdown") return
+    if (!settings.hapticsEnabled) return
+    const haptics = engine.currentSpec?.options?.haptics
+    if (haptics === "off") return
+    const pattern =
+      haptics === "strong"
+        ? Haptics.ImpactFeedbackStyle.Heavy
+        : Haptics.ImpactFeedbackStyle.Light
+    Haptics.impactAsync(pattern).catch(() => {})
+    // Only fire once per entry into countdown; depending on state.kind keeps it stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.kind])
 
   const big = (() => {
@@ -239,7 +264,7 @@ export default function RunScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <View
         style={{
           flex: 1,
@@ -252,11 +277,11 @@ export default function RunScreen() {
           size={260}
           stroke={10}
           progress={Math.max(0, Math.min(1, progress))}
-          color={ringColor}
+          color={colors.ring}
         />
         <Text
           style={{
-            color: textColor,
+            color: colors.text,
             fontSize: 96,
             fontWeight: "800",
             letterSpacing: 1,
@@ -264,7 +289,7 @@ export default function RunScreen() {
         >
           {big}
         </Text>
-        <Text style={{ color: textSecondaryColor, fontSize: 18 }}>{sub}</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 18 }}>{sub}</Text>
       </View>
 
       <View
@@ -277,10 +302,12 @@ export default function RunScreen() {
       >
         <Pressable
           onPress={restart}
+          accessibilityRole="button"
+          accessibilityLabel="Restart timer"
           style={{
             paddingVertical: 14,
             paddingHorizontal: 18,
-            backgroundColor: replayButtonBackgroundColor,
+            backgroundColor: colors.replayBg,
             borderRadius: 12,
           }}
         >
@@ -294,6 +321,8 @@ export default function RunScreen() {
         {state.kind === "running" ? (
           <Pressable
             onPress={pause}
+            accessibilityRole="button"
+            accessibilityLabel="Pause timer"
             style={{
               paddingVertical: 14,
               paddingHorizontal: 18,
@@ -310,34 +339,30 @@ export default function RunScreen() {
         ) : state.kind === "paused" ? (
           <Pressable
             onPress={resume}
+            accessibilityRole="button"
+            accessibilityLabel="Resume timer"
             style={{
               paddingVertical: 14,
               paddingHorizontal: 18,
-              backgroundColor: playButtonBackgroundColor,
+              backgroundColor: colors.playBg,
               borderRadius: 14,
             }}
           >
-            <AntDesign
-              name="play-circle"
-              size={24}
-              color={playButtonIconColor}
-            />
+            <AntDesign name="play-circle" size={24} color={colors.playIcon} />
           </Pressable>
         ) : (
           <Pressable
             onPress={start}
+            accessibilityRole="button"
+            accessibilityLabel="Start timer"
             style={{
               paddingVertical: 14,
               paddingHorizontal: 18,
-              backgroundColor: playButtonBackgroundColor,
+              backgroundColor: colors.playBg,
               borderRadius: 14,
             }}
           >
-            <AntDesign
-              name="play-circle"
-              size={24}
-              color={playButtonIconColor}
-            />
+            <AntDesign name="play-circle" size={24} color={colors.playIcon} />
           </Pressable>
         )}
       </View>

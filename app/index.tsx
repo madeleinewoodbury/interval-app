@@ -1,3 +1,4 @@
+import React, { useCallback } from "react"
 import {
   Pressable,
   Text,
@@ -16,7 +17,7 @@ import { AntDesign } from "@expo/vector-icons"
 import { COLORS } from "../src/constants/colors"
 
 // Timer card component
-function TimerCard({
+const TimerCard = React.memo(function TimerCard({
   timer,
   theme,
   isLight,
@@ -26,13 +27,18 @@ function TimerCard({
   timer: TimerSpec
   theme: typeof neutralTheme
   isLight: boolean
-  onPress: () => void
-  onLongPress: () => void
+  onPress: (timer: TimerSpec) => void
+  onLongPress: (timer: TimerSpec) => void
 }) {
+  const handlePress = useCallback(() => onPress(timer), [onPress, timer])
+  const handleLongPress = useCallback(
+    () => onLongPress(timer),
+    [onLongPress, timer],
+  )
   return (
     <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPress={handlePress}
+      onLongPress={handleLongPress}
       style={{
         padding: 16,
         borderRadius: 12,
@@ -82,7 +88,7 @@ function TimerCard({
       <AntDesign name="right" size={20} color={theme.ui.accent} />
     </Pressable>
   )
-}
+})
 
 export default function TimersScreen() {
   const { timers, loadingTimers, loadTimer, deleteTimer } = useTimer()
@@ -97,56 +103,68 @@ export default function TimersScreen() {
   const isLight = pref === "light"
   const theme = chooseNeutralTheme(pref === "light" ? "light" : "dark")
 
-  const handleTimerPress = (timer: TimerSpec) => {
-    loadTimer(timer)
-    router.push("/run")
-  }
-
-  const handleAddTimer = () => {
+  const handleAddTimer = useCallback(() => {
     router.push("/create-timer")
-  }
+  }, [router])
 
-  const handleTimerLongPress = (timer: TimerSpec) => {
-    Alert.alert(timer.name, "What would you like to do?", [
-      {
-        text: "Edit",
-        onPress: () => router.push(`/create-timer?id=${timer.id}`),
-      },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => handleDeleteTimer(timer),
-      },
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-    ])
-  }
+  const handleDeleteTimer = useCallback(
+    (timer: TimerSpec) => {
+      Alert.alert(
+        "Delete Timer",
+        `Are you sure you want to delete "${timer.name}"? This action cannot be undone.`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await deleteTimer(timer.id)
+              } catch {
+                Alert.alert(
+                  "Error",
+                  "Failed to delete timer. Please try again.",
+                )
+              }
+            },
+          },
+        ],
+      )
+    },
+    [deleteTimer],
+  )
 
-  const handleDeleteTimer = (timer: TimerSpec) => {
-    Alert.alert(
-      "Delete Timer",
-      `Are you sure you want to delete "${timer.name}"? This action cannot be undone.`,
-      [
+  const handleTimerPress = useCallback(
+    (timer: TimerSpec) => {
+      loadTimer(timer)
+      router.push("/run")
+    },
+    [loadTimer, router],
+  )
+
+  const handleTimerLongPress = useCallback(
+    (timer: TimerSpec) => {
+      Alert.alert(timer.name, "What would you like to do?", [
         {
-          text: "Cancel",
-          style: "cancel",
+          text: "Edit",
+          onPress: () => router.push(`/create-timer?id=${timer.id}`),
         },
         {
           text: "Delete",
           style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteTimer(timer.id)
-            } catch {
-              Alert.alert("Error", "Failed to delete timer. Please try again.")
-            }
-          },
+          onPress: () => handleDeleteTimer(timer),
         },
-      ],
-    )
-  }
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ])
+    },
+    [router, handleDeleteTimer],
+  )
 
   if (loadingTimers) {
     return (
@@ -205,6 +223,8 @@ export default function TimersScreen() {
         </View>
         <Pressable
           onPress={handleAddTimer}
+          accessibilityRole="button"
+          accessibilityLabel="Create timer"
           style={{
             width: 36,
             height: 36,
@@ -266,8 +286,8 @@ export default function TimersScreen() {
               timer={timer}
               theme={theme}
               isLight={isLight}
-              onPress={() => handleTimerPress(timer)}
-              onLongPress={() => handleTimerLongPress(timer)}
+              onPress={handleTimerPress}
+              onLongPress={handleTimerLongPress}
             />
           ))
         )}

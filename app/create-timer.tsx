@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import {
   View,
   Text,
   TextInput,
   Pressable,
   ScrollView,
-  SafeAreaView,
   Alert,
   KeyboardAvoidingView,
   Platform,
   useColorScheme,
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { useRouter, useLocalSearchParams } from "expo-router"
 import { useTimer } from "../src/context/TimerProvider"
 import { chooseNeutralTheme } from "../src/utils/themeGenerator"
@@ -60,10 +60,25 @@ export default function CreateTimerScreen() {
 
   const isEditing = !!editingTimerId
 
+  // Read getTimer through a ref so the form-load effect doesn't re-run every
+  // time the timers list changes (which would clobber in-progress edits).
+  const getTimerRef = useRef(getTimer)
+  useEffect(() => {
+    getTimerRef.current = getTimer
+  }, [getTimer])
+
+  // Digit-only filter for numeric inputs — keyboardType="numeric" is only a
+  // hint, so paste / hardware keyboards can still introduce non-digit chars.
+  const onlyDigits = useCallback(
+    (setter: (v: string) => void) => (text: string) =>
+      setter(text.replace(/[^0-9]/g, "")),
+    [],
+  )
+
   // Load existing timer data if editing, or clear fields if creating new
   useEffect(() => {
     if (isEditing && editingTimerId) {
-      const existingTimer = getTimer(editingTimerId)
+      const existingTimer = getTimerRef.current(editingTimerId)
       if (existingTimer) {
         setName(existingTimer.name)
 
@@ -104,7 +119,7 @@ export default function CreateTimerScreen() {
       setRounds("8")
       setSelectedTheme(DEFAULT_COLOR_THEME)
     }
-  }, [isEditing, editingTimerId, getTimer])
+  }, [isEditing, editingTimerId])
 
   const handleSave = async () => {
     // Basic validation
@@ -113,21 +128,25 @@ export default function CreateTimerScreen() {
       return
     }
 
-    const workTotal = parseInt(workMinutes) * 60 + parseInt(workSeconds)
-    const restTotal = parseInt(restMinutes) * 60 + parseInt(restSeconds)
-    const totalRounds = parseInt(rounds)
+    const parseNonNeg = (v: string) => {
+      const n = parseInt(v, 10)
+      return Number.isFinite(n) && n >= 0 ? n : NaN
+    }
+    const workTotal = parseNonNeg(workMinutes) * 60 + parseNonNeg(workSeconds)
+    const restTotal = parseNonNeg(restMinutes) * 60 + parseNonNeg(restSeconds)
+    const totalRounds = parseNonNeg(rounds)
 
-    if (workTotal <= 0) {
+    if (!Number.isFinite(workTotal) || workTotal <= 0) {
       Alert.alert("Error", "Work interval must be greater than 0 seconds")
       return
     }
 
-    if (restTotal <= 0) {
+    if (!Number.isFinite(restTotal) || restTotal <= 0) {
       Alert.alert("Error", "Rest interval must be greater than 0 seconds")
       return
     }
 
-    if (totalRounds <= 0) {
+    if (!Number.isFinite(totalRounds) || totalRounds <= 0) {
       Alert.alert("Error", "Rounds must be greater than 0")
       return
     }
@@ -262,7 +281,7 @@ export default function CreateTimerScreen() {
                 </Text>
                 <TextInput
                   value={workMinutes}
-                  onChangeText={setWorkMinutes}
+                  onChangeText={onlyDigits(setWorkMinutes)}
                   keyboardType="numeric"
                   placeholder="0"
                   placeholderTextColor={theme.ui.textSecondary}
@@ -287,7 +306,7 @@ export default function CreateTimerScreen() {
                 </Text>
                 <TextInput
                   value={workSeconds}
-                  onChangeText={setWorkSeconds}
+                  onChangeText={onlyDigits(setWorkSeconds)}
                   keyboardType="numeric"
                   placeholder="20"
                   placeholderTextColor={theme.ui.textSecondary}
@@ -327,7 +346,7 @@ export default function CreateTimerScreen() {
                 </Text>
                 <TextInput
                   value={restMinutes}
-                  onChangeText={setRestMinutes}
+                  onChangeText={onlyDigits(setRestMinutes)}
                   keyboardType="numeric"
                   placeholder="0"
                   placeholderTextColor={theme.ui.textSecondary}
@@ -352,7 +371,7 @@ export default function CreateTimerScreen() {
                 </Text>
                 <TextInput
                   value={restSeconds}
-                  onChangeText={setRestSeconds}
+                  onChangeText={onlyDigits(setRestSeconds)}
                   keyboardType="numeric"
                   placeholder="10"
                   placeholderTextColor={theme.ui.textSecondary}
@@ -383,7 +402,7 @@ export default function CreateTimerScreen() {
             </Text>
             <TextInput
               value={rounds}
-              onChangeText={setRounds}
+              onChangeText={onlyDigits(setRounds)}
               keyboardType="numeric"
               placeholder="8"
               placeholderTextColor={theme.ui.textSecondary}

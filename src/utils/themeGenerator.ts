@@ -100,6 +100,7 @@ export function generateThemeFromTimer(timerSpec: TimerSpec): TimerTheme {
   const uiBackground = darkenColor(workColor, 0.85) // Very dark version
   const cardBackground = darkenColor(workColor, 0.75) // Lighter than bg
   const accent = restColor // Use rest color as accent
+  const uiIsLight = isLightColor(uiBackground)
 
   return {
     work: {
@@ -120,8 +121,10 @@ export function generateThemeFromTimer(timerSpec: TimerSpec): TimerTheme {
       background: uiBackground,
       cardBackground: cardBackground,
       accent: accent,
-      textPrimary: COLORS.white,
-      textSecondary: COLORS.transparentWhite70,
+      textPrimary: uiIsLight ? COLORS.charcoal900 : COLORS.white,
+      textSecondary: uiIsLight
+        ? COLORS.transparentCharcoal70
+        : COLORS.transparentWhite70,
       buttonPrimary: accent,
       buttonSecondary: lightenColor(uiBackground, 0.2),
       success: COLORS.green500,

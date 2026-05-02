@@ -3,6 +3,7 @@ import { TimerSpec } from "../types"
 import { DEFAULT_COLOR_THEME } from "../constants/colorThemes"
 
 const TIMERS_STORAGE_KEY = "@interval_app_timers"
+const TIMERS_CORRUPT_BACKUP_KEY = "@interval_app_timers_corrupt_v1"
 
 // Default TABATA timer - will be included when app first loads
 const DEFAULT_TABATA: TimerSpec = {
@@ -36,17 +37,34 @@ const DEFAULT_TABATA: TimerSpec = {
 export class TimerStorage {
   // Get all saved timers
   static async getTimers(): Promise<TimerSpec[]> {
+    let timersJson: string | null = null
     try {
-      const timersJson = await AsyncStorage.getItem(TIMERS_STORAGE_KEY)
-      if (timersJson) {
-        return JSON.parse(timersJson)
-      } else {
-        // First time loading - return empty array, no default timer
-        return []
-      }
+      timersJson = await AsyncStorage.getItem(TIMERS_STORAGE_KEY)
     } catch (error) {
-      console.error("Error loading timers:", error)
-      return [] // Return empty array on error
+      console.error("Error reading timers from storage:", error)
+      return []
+    }
+    if (!timersJson) return []
+    try {
+      const parsed = JSON.parse(timersJson)
+      if (!Array.isArray(parsed)) {
+        throw new Error("Stored timers payload is not an array")
+      }
+      return parsed
+    } catch (error) {
+      // Preserve the corrupt blob under a backup key so the user's data isn't
+      // silently overwritten on the next save. Surface loudly in the log.
+      console.error(
+        "Failed to parse stored timers; backing up corrupt payload",
+        error,
+      )
+      try {
+        await AsyncStorage.setItem(TIMERS_CORRUPT_BACKUP_KEY, timersJson)
+        await AsyncStorage.removeItem(TIMERS_STORAGE_KEY)
+      } catch (backupError) {
+        console.error("Failed to back up corrupt timers blob", backupError)
+      }
+      return []
     }
   }
 

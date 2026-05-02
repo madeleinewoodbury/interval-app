@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react"
-import { useKeepAwake } from "expo-keep-awake"
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake"
 import { AppState, Alert } from "react-native"
 import * as Haptics from "expo-haptics"
 import * as Device from "expo-device"
@@ -56,7 +56,6 @@ const soundMap: Record<string, number> = {
 export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  useKeepAwake()
   const engine = useMemo(() => new TimerEngine(), [])
   const { settings } = useSettings()
   const [state, setState] = useState<EngineState>({ kind: "idle" })
@@ -74,6 +73,34 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Audio players (pre-created on mount)
   const soundCache = useRef<Record<string, AudioPlayer | null>>({})
+
+  // Tracks the post-finish setTimeout so we can cancel it before it fires
+  // on a stale player when a new run starts.
+  const stopSoundsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  )
+  const clearStopSoundsTimeout = useCallback(() => {
+    if (stopSoundsTimeoutRef.current) {
+      clearTimeout(stopSoundsTimeoutRef.current)
+      stopSoundsTimeoutRef.current = null
+    }
+  }, [])
+
+  // Drive expo-keep-awake from engine state so the screen sleeps when idle.
+  useEffect(() => {
+    const active = state.kind === "running" || state.kind === "countdown"
+    if (active) {
+      activateKeepAwakeAsync("interval-timer-active").catch(() => {})
+    } else {
+      deactivateKeepAwake("interval-timer-active")
+    }
+  }, [state.kind])
+
+  useEffect(() => {
+    return () => {
+      deactivateKeepAwake("interval-timer-active")
+    }
+  }, [])
 
   // Pre-create audio players on mount
   useEffect(() => {
@@ -399,10 +426,14 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         await NotificationService.cancelAllNotifications()
 
-        // Stop all sounds after a short delay to let completion sound play
-        setTimeout(async () => {
+        // Stop all sounds after a short delay to let completion sound play.
+        // Cancel any prior pending stop in case finished fired twice in quick
+        // succession.
+        clearStopSoundsTimeout()
+        stopSoundsTimeoutRef.current = setTimeout(async () => {
+          stopSoundsTimeoutRef.current = null
           await stopAllSounds()
-        }, 3000) // Stop after 3 seconds
+        }, 3000)
       }
 
       prevState.current = s
@@ -410,20 +441,30 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       unsubscribe() // ensure void return
     }
-  }, [engine, play, stopAllSounds, settings])
+  }, [engine, play, stopAllSounds, settings, clearStopSoundsTimeout])
+
+  // Clear any pending stop-sounds timeout when the provider unmounts so it
+  // can't fire on torn-down players.
+  useEffect(() => {
+    return () => {
+      clearStopSoundsTimeout()
+    }
+  }, [clearStopSoundsTimeout])
 
   const loadTimer = useCallback(
     (t: TimerSpec) => {
+      clearStopSoundsTimeout()
       currentTimer.current = t
       engine.load(t)
       AsyncStorage.setItem(LAST_TIMER_KEY, t.id).catch(() => {})
     },
-    [engine],
+    [engine, clearStopSoundsTimeout],
   )
 
   const start = useCallback(() => {
+    clearStopSoundsTimeout()
     engine.start()
-  }, [engine])
+  }, [engine, clearStopSoundsTimeout])
 
   const startLastOrFirst = useCallback(async () => {
     try {
@@ -465,11 +506,13 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   const resume = () => {
+    clearStopSoundsTimeout()
     engine.resume()
     // Notification rescheduling is handled by AppState listener
   }
 
   const restart = async () => {
+    clearStopSoundsTimeout()
     await NotificationService.cancelAllNotifications()
     await stopAllSounds() // Stop any playing sounds when restarting
     engine.restart()
