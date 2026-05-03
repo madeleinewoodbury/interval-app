@@ -16,6 +16,13 @@ import { TimerSpec } from "../src/types"
 import { AntDesign } from "@expo/vector-icons"
 import { COLORS } from "../src/constants/colors"
 
+const formatDuration = (totalSeconds: number) => {
+  if (totalSeconds < 60) return `${totalSeconds}s`
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`
+}
+
 // Timer card component
 const TimerCard = React.memo(function TimerCard({
   timer,
@@ -68,7 +75,10 @@ const TimerCard = React.memo(function TimerCard({
           {timer.name}
         </Text>
         <Text style={{ color: theme.ui.textSecondary, marginTop: 4 }}>
-          {timer.segments.map((s) => `${s.label} ${s.seconds}s`).join(" / ")} ×{" "}
+          {timer.segments
+            .map((s) => `${s.label} ${formatDuration(s.seconds)}`)
+            .join(" / ")}{" "}
+          ×{" "}
           {timer.rounds}
         </Text>
         <View style={{ flexDirection: "row", marginTop: 6, gap: 8 }}>
