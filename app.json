@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.woodburydev.intervaltrainer",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
