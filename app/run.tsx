@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react"
-import { Text, View, Pressable } from "react-native"
+import { Text, View, Pressable, useWindowDimensions } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useRouter } from "expo-router"
 import { useTimer } from "../src/context/TimerProvider"
@@ -26,6 +26,11 @@ export default function RunScreen() {
   } = useTimer()
   const router = useRouter()
   const { settings } = useSettings()
+  const { height: windowHeight } = useWindowDimensions()
+  const isCompact = windowHeight < 760
+  const ringSize = isCompact ? 180 : 260
+  const bigFontSize = isCompact ? 72 : 96
+  const stackGap = isCompact ? 12 : 24
   const attemptedAutoStart = React.useRef(false)
 
   // Auto-start last or first timer when entering Run tab if idle
@@ -270,19 +275,22 @@ export default function RunScreen() {
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          gap: 24,
+          gap: stackGap,
+          paddingHorizontal: 16,
         }}
       >
         <ProgressRing
-          size={260}
+          size={ringSize}
           stroke={10}
           progress={Math.max(0, Math.min(1, progress))}
           color={colors.ring}
         />
         <Text
+          adjustsFontSizeToFit
+          numberOfLines={1}
           style={{
             color: colors.text,
-            fontSize: 96,
+            fontSize: bigFontSize,
             fontWeight: "800",
             letterSpacing: 1,
           }}
