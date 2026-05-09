@@ -11,6 +11,7 @@ import {
 import ProgressRing from "../src/components/ProgressRing"
 import * as Haptics from "expo-haptics"
 import { AntDesign } from "@expo/vector-icons"
+import { formatRemaining } from "../src/utils/formatDuration"
 
 export default function RunScreen() {
   const {
@@ -191,7 +192,7 @@ export default function RunScreen() {
 
   const big = (() => {
     if (state.kind === "running" || state.kind === "paused")
-      return `${Math.ceil(state.remaining).toString().padStart(2, "0")}`
+      return formatRemaining(Math.ceil(state.remaining))
     if (state.kind === "countdown") return `${Math.ceil(state.remaining)}`
     if (state.kind === "finished") return "DONE"
     return "READY"

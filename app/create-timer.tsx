@@ -24,6 +24,9 @@ import {
   createSegmentsFromTheme,
 } from "../src/constants/colorThemes"
 
+const MAX_SEGMENT_SECONDS = 60 * 60
+const MAX_ROUNDS = 99
+
 export default function CreateTimerScreen() {
   const router = useRouter()
   const { id: editingTimerId } = useLocalSearchParams<{ id?: string }>()
@@ -141,13 +144,28 @@ export default function CreateTimerScreen() {
       return
     }
 
+    if (workTotal > MAX_SEGMENT_SECONDS) {
+      Alert.alert("Error", "Work interval cannot exceed 60 minutes")
+      return
+    }
+
     if (!Number.isFinite(restTotal) || restTotal <= 0) {
       Alert.alert("Error", "Rest interval must be greater than 0 seconds")
       return
     }
 
+    if (restTotal > MAX_SEGMENT_SECONDS) {
+      Alert.alert("Error", "Rest interval cannot exceed 60 minutes")
+      return
+    }
+
     if (!Number.isFinite(totalRounds) || totalRounds <= 0) {
       Alert.alert("Error", "Rounds must be greater than 0")
+      return
+    }
+
+    if (totalRounds > MAX_ROUNDS) {
+      Alert.alert("Error", "Rounds cannot exceed 99")
       return
     }
 
@@ -283,6 +301,7 @@ export default function CreateTimerScreen() {
                   value={workMinutes}
                   onChangeText={onlyDigits(setWorkMinutes)}
                   keyboardType="numeric"
+                  maxLength={2}
                   placeholder="0"
                   placeholderTextColor={theme.ui.textSecondary}
                   style={{
@@ -308,6 +327,7 @@ export default function CreateTimerScreen() {
                   value={workSeconds}
                   onChangeText={onlyDigits(setWorkSeconds)}
                   keyboardType="numeric"
+                  maxLength={2}
                   placeholder="20"
                   placeholderTextColor={theme.ui.textSecondary}
                   style={{
@@ -348,6 +368,7 @@ export default function CreateTimerScreen() {
                   value={restMinutes}
                   onChangeText={onlyDigits(setRestMinutes)}
                   keyboardType="numeric"
+                  maxLength={2}
                   placeholder="0"
                   placeholderTextColor={theme.ui.textSecondary}
                   style={{
@@ -373,6 +394,7 @@ export default function CreateTimerScreen() {
                   value={restSeconds}
                   onChangeText={onlyDigits(setRestSeconds)}
                   keyboardType="numeric"
+                  maxLength={2}
                   placeholder="10"
                   placeholderTextColor={theme.ui.textSecondary}
                   style={{
@@ -404,6 +426,7 @@ export default function CreateTimerScreen() {
               value={rounds}
               onChangeText={onlyDigits(setRounds)}
               keyboardType="numeric"
+              maxLength={2}
               placeholder="8"
               placeholderTextColor={theme.ui.textSecondary}
               style={{
