@@ -182,14 +182,23 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
   const deleteTimer = useCallback(
     async (id: string) => {
       try {
+        const wasCurrent = currentTimer.current?.id === id
         await TimerStorage.deleteTimer(id)
+        if (wasCurrent) {
+          await NotificationService.cancelAllNotifications()
+          await stopAllSounds()
+          clearStopSoundsTimeout()
+          currentTimer.current = null
+          engine.unload()
+          AsyncStorage.removeItem(LAST_TIMER_KEY).catch(() => {})
+        }
         await refreshTimers() // Refresh the list
       } catch (error) {
         console.error("Error deleting timer:", error)
         throw error
       }
     },
-    [refreshTimers],
+    [refreshTimers, engine, stopAllSounds, clearStopSoundsTimeout],
   )
 
   const getTimer = useCallback(

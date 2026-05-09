@@ -94,6 +94,13 @@ export class TimerEngine {
     this.emit()
   }
 
+  unload() {
+    this.reset()
+    this.spec = null
+    this.state = { kind: "idle" }
+    this.emit()
+  }
+
   start() {
     if (!this.spec) return
     const cd = this.spec.options?.countdown ?? 0
