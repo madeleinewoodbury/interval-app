@@ -7,6 +7,7 @@ import {
   useColorScheme,
   StyleSheet,
 } from "react-native"
+import Constants from "expo-constants"
 import { useSettings } from "../src/context/SettingsProvider"
 import { chooseNeutralTheme } from "../src/utils/themeGenerator"
 import { COLORS } from "../src/constants/colors"
@@ -170,7 +171,7 @@ export default function SettingsScreen() {
         Reset to defaults
       </Text>
       <Text style={[styles.versionText, { color: theme.ui.textSecondary }]}>
-        Interval Pro v1.0.0
+        Interval Pro v{Constants.expoConfig?.version ?? "1.0.0"}
       </Text>
     </ScrollView>
   )

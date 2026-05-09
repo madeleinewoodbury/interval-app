@@ -264,6 +264,7 @@ export default function CreateTimerScreen() {
             <TextInput
               value={name}
               onChangeText={setName}
+              maxLength={30}
               placeholder="e.g. HIIT Workout, Study Session"
               placeholderTextColor={theme.ui.textSecondary}
               style={{

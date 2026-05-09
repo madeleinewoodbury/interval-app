@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from "react"
 import { Text, View, Pressable, useWindowDimensions } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { useRouter } from "expo-router"
+import { useRouter, useNavigation } from "expo-router"
 import { useTimer } from "../src/context/TimerProvider"
 import { useSettings } from "../src/context/SettingsProvider"
 import {
@@ -26,6 +26,7 @@ export default function RunScreen() {
     loadingTimers,
   } = useTimer()
   const router = useRouter()
+  const navigation = useNavigation()
   const { settings } = useSettings()
   const { height: windowHeight } = useWindowDimensions()
   const isCompact = windowHeight < 760
@@ -33,6 +34,11 @@ export default function RunScreen() {
   const bigFontSize = isCompact ? 72 : 96
   const stackGap = isCompact ? 12 : 24
   const attemptedAutoStart = React.useRef(false)
+
+  // Reflect the loaded timer's name in the tab header
+  useEffect(() => {
+    navigation.setOptions({ title: engine.currentSpec?.name || "Run" })
+  }, [navigation, engine.currentSpec, state])
 
   // Auto-start last or first timer when entering Run tab if idle
   useEffect(() => {
