@@ -202,6 +202,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
   // Load timers and initialize notifications on app start
   useEffect(() => {
     const initializeApp = async () => {
+      await NotificationService.cancelAllNotifications()
       await refreshTimers()
       const status = await NotificationService.registerForPushNotifications()
       if (status !== "granted" && Device.isDevice) {
@@ -239,7 +240,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     const spec = currentTimer.current
     if (!spec) return
     const s = latestState.current
-    if (!(s.kind === "running" || s.kind === "paused")) return
+    if (s.kind !== "running") return
     const entries: { title: string; body: string; seconds: number }[] = []
     // build boundaries for remaining segments
     let offset = s.remaining // time until current segment ends
@@ -299,7 +300,9 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
           }
           backgroundAt.current = isTimingActive ? Date.now() : null
           await NotificationService.cancelAllNotifications()
-          await scheduleAllRemainingSegmentNotifications()
+          if (isTimingActive) {
+            await scheduleAllRemainingSegmentNotifications()
+          }
         } else if (comingToForeground) {
           const elapsedViaTicks = engine.endBackgroundTracking()
           await NotificationService.cancelAllNotifications()
